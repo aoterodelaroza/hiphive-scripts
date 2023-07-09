@@ -1,0 +1,26 @@
+## 1b-build_cluster_config.py: generate cluster spaces for a given structure
+##
+## Input: prefix.info
+## Output: prefix.cs
+
+## input block ##
+prefix="blah" ## prefix for the generated files
+cutoffs = [5.92, 3.37, 3.37] # list of cutoffs [2nd,3rd,...] in angstrom
+#################
+
+import pickle
+from hiphive import ClusterSpace
+
+# load the info file
+with open(prefix + ".info","rb") as f:
+    calculator, ncell, cell, scel = pickle.load(f)
+
+# build the cluster and save
+cs = ClusterSpace(cell, cutoffs)
+with open(prefix + ".cs","wb") as f:
+    pickle.dump([cutoffs,cs],f)
+
+# print out some details
+print("--- cluster space details ---")
+print(cs)
+print("")
