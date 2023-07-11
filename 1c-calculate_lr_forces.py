@@ -35,3 +35,16 @@ fc2_LR = -dynmat.get_Gonze_nac_dataset()[0]
 
 with open(prefix + ".fc2_lr","wb") as f:
     pickle.dump(fc2_LR,f)
+
+## with open(prefix + ".fc2_lr","wb") as f:
+##     pickle.dump(fc2_LR,f)
+##     born = get_born_vasprunxml(filename='./CALC_LR/vasprun.xml',
+##                                symprec=1e-5, symmetrize_tensors=True)
+##     with open('./CALC_LR/BORN', 'w') as output:
+##         # DEFAULT CONVERSION FACTOR
+##         print('14.399652', file=output)
+##         # DIELECTRIC CONSTANT
+##         print(*[i for i in born[1].reshape(1, 9)[0]], file=output)
+##         # BORN CHARGES
+##         for atom in born[0]:
+##             print(*[i for i in atom.reshape(1, 9)[0]], file=output)
