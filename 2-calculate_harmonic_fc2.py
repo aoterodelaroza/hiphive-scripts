@@ -6,7 +6,7 @@
 ## Output: prefix.fc2_harmonic
 
 ## input block ##
-prefix="bleh" ## prefix for the generated files
+prefix="blah" ## prefix for the generated files
 outputs="*-0/*.out" ## regular expression for the files
 #################
 

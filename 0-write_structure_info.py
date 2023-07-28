@@ -8,7 +8,7 @@
 ## input block ##
 prefix="blah" ## prefix for the generated files
 eq_structure="mgo.scf.in" ## the equilibrium structure
-ncell = (3,3,3) ## the supercell size
+ncell = (2,2,2) ## the supercell size
 calculator = "espresso-in" ## program used for the calculations, case insensitive (vasp,espresso-in)
 #################
 
@@ -36,10 +36,6 @@ units = get_default_physical_units(phcalc)
 ph = phonopy.load(unitcell_filename=eq_structure,supercell_matrix=list(ncell),calculator=phcalc)
 ph = ph.supercell
 scel = ase.Atoms(symbols=ph.symbols,scaled_positions=ph.scaled_positions,cell=ph.cell*units["distance_to_A"],pbc=[1,1,1])
-
-# Write a temporary file with the supercell and read it back. If VASP,
-# this gets the atoms in POSCAR order.
-ase.io.write(prefix + ".tmp_supercell",scel,format=calculator)
 
 # create the info file
 with open(prefix + ".info","wb") as f:

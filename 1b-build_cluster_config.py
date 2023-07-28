@@ -5,7 +5,7 @@
 
 ## input block ##
 prefix="blah" ## prefix for the generated files
-cutoffs = [5.92, 3.37, 3.37] # list of cutoffs [2nd,3rd,...] in angstrom
+cutoffs = [4.21, 3.37, 3.37] # list of cutoffs [2nd,3rd,...] in angstrom
 #################
 
 import pickle
@@ -13,7 +13,7 @@ from hiphive import ClusterSpace
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, ncell, cell, scel = pickle.load(f)
+    calculator, phcalc, ncell, cell, scel = pickle.load(f)
 
 # build the cluster and save
 cs = ClusterSpace(cell, cutoffs)
