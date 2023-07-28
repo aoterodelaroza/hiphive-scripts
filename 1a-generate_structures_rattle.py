@@ -43,7 +43,7 @@ atoms_phonopy = PhonopyAtoms(symbols=cell.get_chemical_symbols(),
 ph = Phonopy(atoms_phonopy, supercell_matrix=ncell*np.eye(3),
              primitive_matrix=None,calculator=calculator)
 ph.generate_displacements(distance=phdist)
-n_structures = max(math.ceil(len(ph.supercells_with_displacements)/3),10)
+n_structures = max(math.ceil(len(ph.supercells_with_displacements)/3),1)
 
 ## Generate rattled structures
 rattle_std = phdist * units["distance_to_A"]
