@@ -5,7 +5,7 @@
 
 ## input block ##
 prefix="blah" ## prefix for the generated files
-cutoffs = [4.21, 3.37, 3.37] # list of cutoffs [2nd,3rd,...] in angstrom
+cutoffs = [6.32, 3.66, 2.99, 2.11, 2.11] # list of cutoffs [2nd,3rd,...] in angstrom
 #################
 
 import pickle

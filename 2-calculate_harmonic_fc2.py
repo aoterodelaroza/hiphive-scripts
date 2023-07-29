@@ -7,7 +7,7 @@
 
 ## input block ##
 prefix="blah" ## prefix for the generated files
-outputs="*-0/*.out" ## regular expression for the files
+outputs="harmonic-0/*.out" ## regular expression for the files
 #################
 
 from glob import glob

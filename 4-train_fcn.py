@@ -6,7 +6,7 @@
 
 ## input block ##
 prefix="blah" ## prefix for the generated files
-outputs="blah-*/*out" # regular expression for the files
+outputs="*/*out" # regular expression for the files
 fit_method="rfe" # training method
 validation_nsplit=5 # number of splits in validation
 train_fraction=0.8 # fraction of data used in training/validation split
@@ -90,4 +90,4 @@ ph.run_mesh([20] * 3)
 ph.run_thermal_properties(temperatures=300)
 fvib = ph.get_thermal_properties()[1][0]
 svib = ph.get_thermal_properties()[2][0]
-print("\nAnharmonic properties at 300 K (kJ/mol): fvib = %.3f svib = %.3f\n" % (fvib,svib))
+print("\nHarmonic properties at 300 K (kJ/mol): fvib = %.3f svib = %.3f\n" % (fvib,svib))

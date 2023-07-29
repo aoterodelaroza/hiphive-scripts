@@ -16,7 +16,7 @@ out_kwargs = {
     'ecutrho': 800.0,
     'conv_thr': 1e-10,
     'pseudopotentials': {'O': 'o.UPF', 'Mg': 'mg.UPF'},
-    'kpts': (3,3,3),
+    'kpts': (2,2,2),
 } ## pass this down to ASE (example for QE)
 #################
 
