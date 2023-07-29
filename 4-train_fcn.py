@@ -1,4 +1,4 @@
-## 2-train_fcn.py: train a force constant model
+## 4-train_fcn.py: train a force constant model
 ##
 ## Input: prefix.info, forces in */, prefix.cs
 ## -> optional: prefix.fc2_lr ## subtract LR from reference forces first, if file present

@@ -19,7 +19,7 @@ from pygsl.testing.sf import debye_3 as D3
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, ncell, cell, scel = pickle.load(f)
+    calculator, phcalc, ncell, cell, scel = pickle.load(f)
 
 # Boltzmann constant in Ha/K, number of atoms
 kB = scipy.constants.k / scipy.constants.physical_constants['hartree-joule relationship'][0]

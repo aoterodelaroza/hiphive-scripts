@@ -6,8 +6,7 @@
 
 ## input block ##
 prefix="blah" ## prefix for the generated files
-cutoff_2nd=None ## cutoff for the structure generation; None=second-order cutoff in clusterspace
-n_structures = 30 # number of structures used in scph
+n_structures=30 # number of structures used in scph
 train_fraction=0.8 # fraction of data used in training/validation split
 n_iterations = 10 # iterations in scph, at least 5
 fit_method="rfe" # training method
@@ -19,6 +18,7 @@ import time
 import pickle
 import numpy as np
 from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
+from hiphive.cutoffs import estimate_maximum_cutoff
 from hiphive.calculators import ForceConstantCalculator
 from hiphive.force_constant_model import ForceConstantModel
 from hiphive.structure_generation import generate_rattled_structures, generate_phonon_rattled_structures
@@ -29,7 +29,7 @@ from trainstation import Optimizer
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, ncell, cell, scel = pickle.load(f)
+    calculator, phcalc, ncell, cell, scel = pickle.load(f)
 
 # load the cs file
 with open(prefix + ".cs","rb") as f:
@@ -45,9 +45,7 @@ if os.path.isfile(prefix + ".fc2_lr"):
         fc2_LR = pickle.load(f)
 
 # build the cs for the schp calculation, force constants, and calculator
-if not cutoff_2nd:
-    cutoff_2nd = cutoffs[0]
-cs = ClusterSpace(cell,[cutoff_2nd])
+cs = ClusterSpace(cell,[estimate_maximum_cutoff(scel)-1e-4])
 fcs = fcp.get_force_constants(scel)
 calc = ForceConstantCalculator(fcs)
 
@@ -56,7 +54,7 @@ atoms_phonopy = PhonopyAtoms(symbols=cell.get_chemical_symbols(),
                              scaled_positions=cell.get_scaled_positions(),
                              cell=cell.cell)
 ph = Phonopy(atoms_phonopy, supercell_matrix=ncell*np.eye(3),
-             primitive_matrix=None,calculator=calculator)
+             primitive_matrix=None,calculator=phcalc)
 
 # open output file
 fout = open(prefix + ".svib","w")
@@ -102,7 +100,8 @@ for t in temperatures:
     for i in range(max(n_iterations,5)):
         # generate structures with new FC2, including the LR correction
         fcm.parameters = param_old
-        fc2 = fcm.get_force_constants().get_fc_array(order=2, format='ase')
+        fc2 = fcm.get_force_constants().get_fc_array(order=2)
+
         if fc2_LR is not None:
             fc2 += fc2_LR
         phonon_rattled_structures = generate_phonon_rattled_structures(scel,fc2,n_structures,t)
