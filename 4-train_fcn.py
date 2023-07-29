@@ -85,6 +85,8 @@ atoms_phonopy = PhonopyAtoms(symbols=cell.get_chemical_symbols(),
 ph = Phonopy(atoms_phonopy, supercell_matrix=ncell*np.eye(3),
              primitive_matrix=None,calculator=phcalc)
 fc2 = fcp.get_force_constants(scel).get_fc_array(order=2)
+if fc2_LR is not None:
+    fc2 += fc2_LR
 ph.set_force_constants(fc2)
 ph.run_mesh([20] * 3)
 ph.run_thermal_properties(temperatures=300)
