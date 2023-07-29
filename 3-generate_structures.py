@@ -5,9 +5,18 @@
 
 ## input block ##
 prefix="blah" ## prefix for the generated files
-fc2 = "FORCE_CONSTANTS_2ND" ## FC2s from phonopy/elsewhere (text)
-rattle = [(300,12),(500,12)] ## rattle type: list of (T,nstruct)
-out_kwargs = {} ## pass this down to ASE
+fc2_phonopy = None ## if given, read the FC2s from phonopy (FORCE_CONSTANTS)
+rattle = [(1000,10)] ## rattle type: list of (T,nstruct)
+out_kwargs = {
+    'prefix': 'crystal',
+    'pseudo_dir': '../..',
+    'tprnfor': True,
+    'ecutwfc': 80.0,
+    'ecutrho': 800.0,
+    'conv_thr': 1e-10,
+    'pseudopotentials': {'O': 'o.UPF', 'Mg': 'mg.UPF'},
+    'kpts': (3,3,3),
+} ## pass this down to ASE (example for QE)
 #################
 
 import os
@@ -18,11 +27,15 @@ from hiphive.structure_generation import generate_phonon_rattled_structures
 
 # create the info file
 with open(prefix + ".info","rb") as f:
-    calculator, ncell, cell, scel = pickle.load(f)
+    calculator, phcalc, ncell, cell, scel = pickle.load(f)
 
 # 2nd-order force constant (text-mode)
-fc2 = hp.ForceConstants.read_phonopy(supercell=scel,fname=fc2,format='text')
-fc2 = fc2.get_fc_array(order=2,format='ase')
+if (fc2_phonopy):
+    fc2 = hp.ForceConstants.read_phonopy(supercell=scel,fname=fc2,format='text')
+    fc2 = fc2.get_fc_array(order=2,format='ase')
+else:
+    with open(prefix + ".fc2_harmonic","rb") as f:
+        fc2 = pickle.load(f)
 
 # generate the structures
 for rr in rattle:
@@ -34,6 +47,6 @@ for rr in rattle:
         os.mkdir(name)
         if calculator == "vasp":
             filename = name + "/POSCAR"
-        else:
-            filename = name + "/" + name
+        elif calculator == "espresso-in":
+            filename = name + "/" + name + ".scf.in"
         ase.io.write(filename,iz[1],format=calculator,**out_kwargs)

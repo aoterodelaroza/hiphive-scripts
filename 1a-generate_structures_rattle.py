@@ -41,7 +41,7 @@ atoms_phonopy = PhonopyAtoms(symbols=cell.get_chemical_symbols(),
                              scaled_positions=cell.get_scaled_positions(),
                              cell=cell.cell)
 ph = Phonopy(atoms_phonopy, supercell_matrix=ncell*np.eye(3),
-             primitive_matrix=None,calculator=calculator)
+             primitive_matrix=None,calculator=phcalc)
 ph.generate_displacements(distance=phdist)
 n_structures = max(math.ceil(len(ph.supercells_with_displacements)/3),1)
 

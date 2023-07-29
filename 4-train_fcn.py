@@ -6,7 +6,7 @@
 
 ## input block ##
 prefix="blah" ## prefix for the generated files
-outputs="CALC/*/vasprun.xml" # regular expression for the files
+outputs="blah-*/*out" # regular expression for the files
 fit_method="rfe" # training method
 validation_nsplit=5 # number of splits in validation
 train_fraction=0.8 # fraction of data used in training/validation split
@@ -21,10 +21,12 @@ from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
 from trainstation import CrossValidationEstimator
 from collections import defaultdict
+from phonopy import Phonopy
+from phonopy.structure.atoms import PhonopyAtoms
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, ncell, cell, scel = pickle.load(f)
+    calculator, phcalc, ncell, cell, scel = pickle.load(f)
 
 # read the cluster configuration
 with open(prefix + ".cs","rb") as f:
@@ -35,8 +37,7 @@ sc = StructureContainer(cs)
 for fname in glob(outputs):
     atoms = ase.io.read(fname)
 
-    # this is because otherwise the atoms are not in POSCAR order
-    scell_order = cell.repeat(ncell)
+    # get displacements and forces
     displacements = get_displacements(atoms, scel)
     forces = atoms.get_forces()
 
@@ -77,3 +78,16 @@ fcp.write(prefix + '.fcn')
 print("--- force constant potential details ---")
 print(fcp)
 
+## calculate list of temperatures (for checking)
+atoms_phonopy = PhonopyAtoms(symbols=cell.get_chemical_symbols(),
+                             scaled_positions=cell.get_scaled_positions(),
+                             cell=cell.cell)
+ph = Phonopy(atoms_phonopy, supercell_matrix=ncell*np.eye(3),
+             primitive_matrix=None,calculator=phcalc)
+fc2 = fcp.get_force_constants(scel).get_fc_array(order=2)
+ph.set_force_constants(fc2)
+ph.run_mesh([20] * 3)
+ph.run_thermal_properties(temperatures=300)
+fvib = ph.get_thermal_properties()[1][0]
+svib = ph.get_thermal_properties()[2][0]
+print("\nAnharmonic properties at 300 K (kJ/mol): fvib = %.3f svib = %.3f\n" % (fvib,svib))

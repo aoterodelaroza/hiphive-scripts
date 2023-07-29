@@ -35,7 +35,6 @@ for fname in glob(outputs):
     atoms = ase.io.read(fname)
 
     # this is because otherwise the atoms are not in POSCAR order
-    scell_order = cell.repeat(ncell)
     displacements = get_displacements(atoms, scel)
     forces = atoms.get_forces()
 
@@ -66,7 +65,7 @@ atoms_phonopy = PhonopyAtoms(symbols=cell.get_chemical_symbols(),
                              scaled_positions=cell.get_scaled_positions(),
                              cell=cell.cell)
 ph = Phonopy(atoms_phonopy, supercell_matrix=ncell*np.eye(3),
-             primitive_matrix=None,calculator=calculator)
+             primitive_matrix=None,calculator=phcalc)
 ph.set_force_constants(fc2)
 ph.run_mesh([20] * 3)
 ph.run_thermal_properties(temperatures=300)

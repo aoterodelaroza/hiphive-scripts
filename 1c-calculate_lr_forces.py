@@ -22,7 +22,7 @@ atoms_phonopy = PhonopyAtoms(symbols=cell.get_chemical_symbols(),
                              scaled_positions=cell.get_scaled_positions(),
                              cell=cell.cell)
 ph = Phonopy(atoms_phonopy, supercell_matrix=ncell*np.eye(3),
-             primitive_matrix=None)
+             primitive_matrix=None,calculator=phcalc)
 
 ph.nac_params = parse_BORN(ph.primitive, filename=born_file)
 ph.set_force_constants(np.zeros((len(atoms_phonopy), len(atoms_phonopy), 3, 3)))
