@@ -2,6 +2,8 @@
 
 ## Usage: python make_born_q2r.py NaCl.in NaCl.fc > BORN
 
+## From the phonopy distribution.
+
 import sys
 import numpy as np
 from phonopy.structure.symmetry import elaborate_borns_and_epsilon
