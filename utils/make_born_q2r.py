@@ -21,7 +21,7 @@ if q2r.epsilon is not None:
         q2r.epsilon,
         supercell_matrix=np.diag(q2r.dimension),
         symmetrize_tensors=True)
-    print("14.399652")
+    print("2.000000")
     print(("%13.8f" * 9) % tuple(epsilon.ravel()))
     for z in borns:
         print(("%13.8f" * 9) % tuple(z.ravel()))
