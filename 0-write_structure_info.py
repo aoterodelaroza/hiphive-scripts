@@ -14,13 +14,13 @@ ncell = (3 ,3 ,3) ## the supercell size
 calculator = "espresso-in" ## program used for the calculations, case insensitive (vasp,espresso-in)
 #################
 
-from phonopy.units import units
 import os
 import pickle
 import ase
 import ase.io
 import ase.build
 import phonopy
+import numpy as np
 from phonopy.interface.calculator import get_default_physical_units, get_force_constant_conversion_factor
 from hiphive.cutoffs import estimate_maximum_cutoff
 from phonopy.file_IO import parse_BORN
@@ -46,6 +46,7 @@ scel = ase.Atoms(symbols=ph.symbols,scaled_positions=ph.scaled_positions,cell=ph
 
 # if BORN file exists, read the NAC parameters
 if os.path.isfile("BORN"):
+    print("BORN file is used, generating " + prefix + ".fc2_lr")
     phcel.nac_params = parse_BORN(phcel.primitive, symprec=1e-5, is_symmetry=True,
                                   filename='BORN')
     phcel.force_constants = np.zeros((len(scel), len(scel), 3, 3))
