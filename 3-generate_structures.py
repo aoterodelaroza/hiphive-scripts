@@ -1,4 +1,4 @@
-## 1a-generate_structures.py: generate random structures by phonon rattling.
+## 3-generate_structures.py: generate random structures by phonon rattling.
 ##
 ## Input: prefix.info
 ## Output: a number of input structures in prefix*/
@@ -7,19 +7,14 @@
 prefix="blah" ## prefix for the generated files
 fc2_phonopy = None ## if given, read the FC2s from phonopy (FORCE_CONSTANTS)
 rattle = [(500, 20)] ## rattle type: list of (T,nstruct)
-name = 'job' ## folder name 
 
 out_kwargs = {
     'prefix': 'crystal',
-    'pseudo_dir': '../../pseudo',
+    'pseudo_dir': '../..',
     'tprnfor': True,
-    'ecutwfc': 60.0,
-    'ecutrho': 600.0,
+    'ecutwfc': 80.0,
+    'ecutrho': 800.0,
     'calculation': 'scf',
-    'tprnfor': True,
-    'tstress': True,
-    'etot_conv_thr': 1e-5,
-    'forc_conv_thr': 1e-4,
     'conv_thr': 1e-10,
     'pseudopotentials': {'Sr': 'sr.UPF', 'Ti': 'ti.UPF', 'O': 'o.UPF'},
     'kpts': (3, 3, 3),
@@ -34,11 +29,9 @@ from hiphive.structure_generation import generate_phonon_rattled_structures
 
 # create the info file
 with open(prefix + ".info","rb") as f:
-    ## EB units added
     calculator, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
-# 2nd-order force constant (text-mode)
-## EB FC2 need to be in eV/ang**2
+# 2nd-order force constant (text-mode), need to be in eV/ang**2
 if (fc2_phonopy):
     fc2 = hp.ForceConstants.read_phonopy(supercell=scel,fname=fc2,format='text')
     fc2 = fc2.get_fc_array(order=2,format='ase')
@@ -53,10 +46,8 @@ else:
 for rr in rattle:
     structures = generate_phonon_rattled_structures(scel,fc2,rr[1],rr[0])
     for iz in enumerate(structures):
-        ## EB
-        dirname = f'{name}-{rr[0]:04d}-{iz[0]:02d}'
-        print(dirname)
-        if os.path.isdir(name):
+        dirname = f'{prefix}-{rr[0]:04d}-{iz[0]:02d}'
+        if os.path.isdir(dirname):
             raise Exception("directory " + dirname + " already exists")
         os.mkdir(dirname)
         if calculator == "vasp":

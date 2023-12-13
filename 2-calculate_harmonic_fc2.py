@@ -18,12 +18,9 @@ from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
 from hiphive.cutoffs import estimate_maximum_cutoff
 from trainstation import Optimizer
-## from phonopy import Phonopy
-## from phonopy.structure.atoms import PhonopyAtoms
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    ## EB units added
     calculator, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
 
@@ -46,7 +43,7 @@ for fname in glob(outputs):
     atoms_tmp.new_array('forces', forces)
     sc.add_structure(atoms_tmp)
 
-# ##print out some details
+# print out some details
 print("--- structure container details ---")
 print(sc)
 print("")
@@ -59,26 +56,18 @@ print(opt)
 ## save the force constant potential
 fcp = ForceConstantPotential(cs, opt.parameters)
 fc2 = fcp.get_force_constants(scel).get_fc_array(order=2)
-## EB return eV/ag**2 to the corresponding units
+# return eV/ag**2 to the corresponding units
 fc2 = fc2 / fc_factor
-## TO REMOVE
-from phonopy.file_IO import write_FORCE_CONSTANTS, write_force_constants_to_hdf5
-write_FORCE_CONSTANTS(fc2)
-## TO REMOVE
-## EB fc2 written with the calculator units
+
+#### various other ways of writing the resulting fc2
+## from phonopy.file_IO import write_FORCE_CONSTANTS, write_force_constants_to_hdf5
+## write_FORCE_CONSTANTS(fc2)
+
+## fc2 written with the calculator units
 with open(prefix + ".fc2_harmonic","wb") as f:
     pickle.dump(fc2, f)
 
-## calculate list of temperatures (for checking)
-## Eeste no lee ficheros si los hay
-##  EB already in phcel
-## atoms_phonopy = PhonopyAtoms(symbols=cell.get_chemical_symbols(),
-##                              scaled_positions=cell.get_scaled_positions(),
-##                              cell=cell.cell)
-## ph = Phonopy(atoms_phonopy, supercell_matrix=ncell*np.eye(3),
-##              primitive_matrix=None,calculator=phcalc)
-
-## EB update phonopy
+## update phonopy
 phcel.force_constants = fc2
 phcel.run_mesh([20] * 3)
 phcel.run_thermal_properties(temperatures=300)

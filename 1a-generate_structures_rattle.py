@@ -25,30 +25,16 @@ import pickle
 import os
 import ase
 import numpy as np
-from phonopy.interface.calculator import get_default_displacement_distance 
-from phonopy.interface.calculator import get_default_physical_units 
-# from phonopy import Phonopy
-# from phonopy.structure.atoms import PhonopyAtoms
+from phonopy.interface.calculator import get_default_displacement_distance, get_default_physical_units
 from hiphive.structure_generation import generate_rattled_structures
 
 # read the info file
 with open(prefix + ".info","rb") as f:
-    ## EB units and phcel added
     calculator, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
-
-
 units = get_default_physical_units(phcalc)
 
 ## Get the displacement distance and get the number of structures created by phonopy
 phdist = get_default_displacement_distance(phcalc)
-
-## EB en phcel
-## atoms_phonopy = PhonopyAtoms(symbols=cell.get_chemical_symbols(),
-##                              scaled_positions=cell.get_scaled_positions(),
-##                              cell=cell.cell)
-## ph = Phonopy(atoms_phonopy, supercell_matrix=ncell*np.eye(3),
-##              primitive_matrix=None,calculator=phcalc)
-
 phcel.generate_displacements(distance=phdist)
 n_structures = max(math.ceil(len(phcel.supercells_with_displacements)/3),1)
 
@@ -57,7 +43,6 @@ rattle_std = phdist * units["distance_to_A"]
 structures = generate_rattled_structures(scel, n_structures, rattle_std)
 
 for iz in enumerate(structures):
-    print(iz)
     name = 'harmonic' + "-%d" % iz[0]
     if os.path.isdir(name):
         raise Exception("directory " + name + " already exists")
