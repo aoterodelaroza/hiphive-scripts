@@ -21,10 +21,8 @@ from pygsl.testing.sf import debye_3 as D3
 # load the info file
 with open(prefix + ".info","rb") as f:
     calculator, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
-## EB phonopy returns primitive cell thermodynamic properties
 z = len(cell.get_chemical_symbols()) / len(phcel.primitive.masses)
-# Boltzmann constant in Ha/K, number of atoms
-kB = scipy.constants.k / scipy.constants.physical_constants['hartree-joule relationship'][0]
+kB = scipy.constants.k / scipy.constants.physical_constants['hartree-joule relationship'][0] # Ha/K
 natom = len(cell)
 
 # debye and extended debye functions

@@ -40,11 +40,6 @@ from hiphive import ForceConstants
 with open(prefix + ".info","rb") as f:
     calculator, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
-# load the cs file
-## EB se carga pero no se usa
-with open(prefix + ".cs","rb") as f:
-    cutoffs,cs = pickle.load(f)
-
 # load the fcp
 fcp = ForceConstantPotential.read(prefix + '.fcn')
 
