@@ -1,4 +1,4 @@
-## 6-fit_debye_model.py: fit extended debye model to S(T) data and obtain
+## 4-fit_debye_model.py: fit extended debye model to S(T) data and obtain
 ## fit parameters and list of (T,F,S,Cv)
 ##
 ## Input: prefix.info, prefix.svib
@@ -8,8 +8,8 @@ import numpy as np
 
 ## input block ##
 prefix="blah" ## prefix for the generated files
-temperatures = np.arange(0, 2580, 10)
-npoly=2 # number of parameters in the polynomial part of extended Debye
+temperatures = np.arange(0, 2600, 1) # extended temperature list
+npoly=4 # number of parameters in the polynomial part of extended Debye
 #################
 
 import pickle
@@ -17,19 +17,15 @@ import scipy
 import scipy.constants
 import matplotlib.pyplot as plt
 from pygsl.testing.sf import debye_3 as D3
-from phonopy.interface.calculator import get_default_physical_units
-from phonopy import units as phonopy_units
 
 # load the info file
 with open(prefix + ".info","rb") as f:
     calculator, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
-
-## phonopy returns primitive cell thermodynamic properties
+## EB phonopy returns primitive cell thermodynamic properties
 z = len(cell.get_chemical_symbols()) / len(phcel.primitive.masses)
 # Boltzmann constant in Ha/K, number of atoms
 kB = scipy.constants.k / scipy.constants.physical_constants['hartree-joule relationship'][0]
 natom = len(cell)
-units = get_default_physical_units(phcalc)
 
 # debye and extended debye functions
 def fdebye(t,thetad):
@@ -113,11 +109,10 @@ def cvdebye_ext(t,pin):
   return cv
 
 ## read the svib file
-conver = phonopy_units.Hartree * phonopy_units.EvTokJmol
 xx = np.loadtxt(prefix + ".svib")
-f0 = xx[0,1] * z / conver ## zero-point energy in Ha
+f0 = xx[0,1] * z / 4.184 / 627.50947 ## zero-point energy in Ha
 t = xx[1:,0] ## temperature in K (skip 0 K)
-s = xx[1:,3] * z / conver / 1000
+s = xx[1:,3] * z / 1000 / 4.184 / 627.50947 ## entropy in Ha/K (skip 0 K)
 
 ## initial debye fit
 def lsqr_residuals_debye(x,*args,**kwargs):
@@ -147,10 +142,12 @@ with open(prefix + ".xdebye","w") as f:
 
 ## output the temperatures in thermal-data
 with open(prefix + ".thermal-data","w") as f:
+    conver = scipy.constants.physical_constants['Hartree energy in eV'][0]
     tlist = np.array(temperatures)
-    fd = fdebye_ext(tlist,res.x)
-    sd = np.maximum(sdebye_ext(tlist,res.x),1e-11)
-    cd = np.maximum(cvdebye_ext(tlist,res.x),1e-11)
+    fd = fdebye_ext(tlist,res.x) * conver
+    sd = np.maximum(sdebye_ext(tlist,res.x) * conver,1e-11)
+    cd = np.maximum(cvdebye_ext(tlist,res.x) * conver,1e-11)
+
     print("## T(K) F(Ha) S(Ha/K) Cv(Ha/K)",file=f)
     for x in zip(tlist,fd,sd,cd):
         print("%.2f %.10f %.10f %.10f" % (x[0], x[1], x[2], x[3]),file=f)
@@ -159,7 +156,8 @@ with open(prefix + ".thermal-data","w") as f:
 t = xx[:,0]
 s = xx[:,3] * z
 plt.plot(t,s,'ok',label='$S_{\\rm QP}$ data')
-plt.plot(temperatures,sdebye_ext(temperatures,res.x) * 1000 * conver,'-r',label='Extended Debye fit')
+plt.plot(temperatures,sdebye_ext(temperatures,res.x) * 1000 * 4.184 * 627.50947,
+        '-r',label='Extended Debye fit')
 plt.xlabel('Temperature (K)')
 plt.ylabel('Entropy (J/K/mol)')
 plt.legend()

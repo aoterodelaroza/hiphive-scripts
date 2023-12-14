@@ -7,32 +7,26 @@
 ##
 ## Stop if imaginary frequencies appear.
 
+import numpy as np
+
 ## input block ##
-prefix="bleh" ## prefix for the generated files
+prefix="blah" ## prefix for the generated files
 n_structures = 10 # number of structures used in scph
 train_fraction=0.8 # fraction of data used in training/validation split
 fit_method="rfe" # training method
 temperatures = [300, 3000] # temperature list (0 is always included) eg: np.arange(440, 0, -10)
 write_fc2eff = True # write the second-order effective force constants file (prefix-temp.fc2_eff)
 restart_fc2 = None # name of the FC2 file to start from or None
-
-### xxxxx ##
-
-alpha_initial = 0.2
-
-## EB new parameters
-n_max = 300 # max number of steps
-n_safe = 30 # requiered steps with real frequencies
-n_dead = 20 # max consecutive steps with non-real frequencies
-n_last = 20 # last steps considered for the fvib, svib, fvibstd and svibstd calculation
-
-
+alpha = 0.2 # damping factor for the parameters in the scph iterations
+n_max = 300 # max number of steps in scph
+n_safe = 30 # minimum number of steps required to have real frequencies before averaging
+n_dead = 20 # crash after n_dead with imaginary frequencies
+n_last = 20 # n_last steps are used for fvib, svib, etc. averages
 #################
 
 import os
 import time
 import pickle
-import numpy as np
 from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.cutoffs import estimate_maximum_cutoff
 from hiphive.calculators import ForceConstantCalculator
@@ -52,7 +46,6 @@ with open(prefix + ".cs","rb") as f:
     cutoffs,cs = pickle.load(f)
 
 # load the fcp
-
 fcp = ForceConstantPotential.read(prefix + '.fcn')
 
 # load the LR fc2, if present
@@ -117,9 +110,8 @@ for t in temperatures:
     param_old = opt.parameters.copy()
     flist = []
     slist = []
-    count = 0
+    live_counter = 0
     dead_counter = 0
-    alpha = alpha_initial ## update parameter outside the loop
     for i in range(max(n_max,1)):
 
         # generate structures with new FC2, including the LR correction
@@ -157,17 +149,19 @@ for t in temperatures:
         ## check whether to stop if negative/imaginary frequencies
         fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
         if np.isnan(fvib):
-            dead_counter += 1
+            if dead_counter == n_dead//2:
+                live_counter = 0
             rand = 0.4
             param_old = rand * opt.parameters + (1-rand)*param_old
+            dead_counter += 1
         else:
-            if count == n_dead // 2:
+            if live_counter == n_dead // 2:
                 dead_counter = 0
             svib = phcel.get_thermal_properties_dict()['entropy'][0]
             flist.append(fvib)
             slist.append(svib)
             param_old = param_new
-            count += 1
+            live_counter += 1
 
         ## print iteration summary
         disps = [atoms.get_array('displacements') for atoms in phonon_rattled_structures]
@@ -175,21 +169,17 @@ for t in temperatures:
         disp_max = np.max(np.abs(disps))
         print(f'{i}: x_new = {x_new_norm:.3e}, delta_x = {delta_x_norm:.3e},',
               f'disp_ave = {disp_ave:.5f}, fvib = {fvib:.3f},',
-              f'svib = {svib:.3f}, alpha = {alpha:.2f}')
-
-        ## restart counter if n_dead/2 consecutive bad steps
-        if dead_counter == n_dead//2:
-            count = 0
+              f'svib = {svib:.3f}')
 
         if dead_counter == n_dead:
-            print(f'Frequencies not converged at {t} loop ended')
+            print(f'Frequencies not converged at temperature {t}, loop ended')
             exit()
 
         if i == n_max-1:
-            print(f'Frequencies not converged at {t} loop ended')
+            print(f'Frequencies not converged at tempearture {t}, loop ended')
             exit()
 
-        if count == n_safe:
+        if live_counter == n_safe:
             ## print last values only
             fvib = np.mean(flist[len(flist)-n_last:len(flist)])
             svib = np.mean(slist[len(slist)-n_last:len(slist)])
