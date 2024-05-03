@@ -7,7 +7,7 @@
 ## Output: a number of subdirectories containing the rattled structures
 
 ## input block ##
-prefix="blah" ## prefix for the generated files
+prefix="mgo" ## prefix for the generated files
 out_kwargs = {
     'prefix': 'crystal',
     'pseudo_dir': '../..',

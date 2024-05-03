@@ -3,28 +3,31 @@
 ## resulting fc2 can be used for the more sophisticated phonon rattle.
 ##
 ## Input: prefix.info, forces in */
+## -> optional: prefix.fc2_lr ## subtract LR from reference forces before the fit
 ## Output: prefix.fc2_harmonic
 
 ## input block ##
-prefix="blah" ## prefix for the generated files
-outputs="blah-1000-1/*scf.out" ## regular expression for the files
+prefix="mgo" ## prefix for the generated files
+outputs="harmonic-*/*.out" ## regular expression for the files
 #################
 
 from glob import glob
 import pickle
 import numpy as np
 import ase
+import os
 from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
 from hiphive.cutoffs import estimate_maximum_cutoff
-from trainstation import Optimizer
+from hiphive_utilities import least_squares
 
 # load the info file
 with open(prefix + ".info","rb") as f:
     calculator, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
-
 # build cluster space with only fc2
+# esto puede ser problematico en cristales moleculares, ya que no calculaba
+# bien el maximo con estimate_maximum_cutoff
 cutoffs = [estimate_maximum_cutoff(scel)-1e-4]
 cs = ClusterSpace(cell, cutoffs)
 
@@ -49,13 +52,24 @@ print(sc)
 print("")
 
 ## run the training
-opt = Optimizer(sc.get_fit_data(),fit_method="least-squares",train_size=1.0)
-opt.train()
-print(opt)
+if os.path.isfile(prefix + ".fc2_lr"):
+    with open(prefix + ".fc2_lr","rb") as f:
+        fc2_LR = pickle.load(f) * fc_factor
+
+    displacements = np.array([fs.displacements for fs in sc])
+    M, F = sc.get_fit_data()
+    F -= np.einsum('ijab,njb->nia', -fc2_LR, displacements).flatten()
+else:
+    M, F = sc.get_fit_data()
+
+_, coefs, rmse = least_squares(M, F, verbose=1)
 
 ## save the force constant potential
-fcp = ForceConstantPotential(cs, opt.parameters)
+fcp = ForceConstantPotential(cs, coefs)
 fc2 = fcp.get_force_constants(scel).get_fc_array(order=2)
+if os.path.isfile(prefix + ".fc2_lr"):
+    fc2 += fc2_LR
+
 # return eV/ag**2 to the corresponding units
 fc2 = fc2 / fc_factor
 
@@ -74,4 +88,5 @@ phcel.run_thermal_properties(temperatures=300)
 fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
 svib = phcel.get_thermal_properties_dict()['entropy'][0]
 
-print("\nHarmonic properties at 300 K (kJ/mol): fvib = %.3f svib = %.3f\n" % (fvib,svib))
+print("Quality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, np.mean(np.abs(F))*1000))
+print("Harmonic properties at 300 K: Fvib = %.3f kJ/mol, Svib = %.3f J/K/mol\n" % (fvib,svib))

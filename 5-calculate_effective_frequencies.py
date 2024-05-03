@@ -1,6 +1,6 @@
-## 5-calculate_effective_frequencies.py: calculate effective frequencies from FCn
+## 5-calculate_effective_frequencies.py: calculate effective frequencies on a temperature grid from FCn
 ##
-## Input: prefix.info, prefix.cs, prefix.fcn
+## Input: prefix.info, prefix.fcn
 ## -> optional: prefix.fc2_lr ## subtract LR from reference forces first, if file present
 ## Output: prefix.svib
 ## -> optional: prefix-<temperature>.fc2_eff ## per-temperature second-order effective force constants
@@ -10,63 +10,55 @@
 import numpy as np
 
 ## input block ##
-prefix="blah" ## prefix for the generated files
+prefix="mgo" ## prefix for the generated files
 n_structures = 10 # number of structures used in scph
+validation_nsplit=5 # number of splits in validation (set to 0 for plain least-squares)
 train_fraction=0.8 # fraction of data used in training/validation split
-fit_method="rfe" # training method
-temperatures = [300, 3000] # temperature list (0 is always included) eg: np.arange(440, 0, -10)
-write_fc2eff = True # write the second-order effective force constants file (prefix-temp.fc2_eff)
-restart_fc2 = None # name of the FC2 file to start from or None
+temperatures = [100,200,300,400,500] # temperature list (0 is always included) eg: np.arange(440, 0, -10)
+write_fc2eff = False # write the second-order effective force constants file (prefix-temp.fc2_eff)
+#################
+
+## details of SCPH ##
 alpha = 0.2 # damping factor for the parameters in the scph iterations
 n_max = 300 # max number of steps in scph
-n_safe = 30 # minimum number of steps required to have real frequencies before averaging
-n_dead = 20 # crash after n_dead with imaginary frequencies
-n_last = 20 # n_last steps are used for fvib, svib, etc. averages
+n_safe = 15 # minimum number of steps required to have real frequencies before averaging
+n_dead = 5 # crash after n_dead with imaginary frequencies
+n_last = 10 # n_last steps are used for fvib, svib, etc. averages
 #################
 
 import os
 import time
 import pickle
 from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
+from hiphive import ForceConstants
 from hiphive.cutoffs import estimate_maximum_cutoff
 from hiphive.calculators import ForceConstantCalculator
 from hiphive.force_constant_model import ForceConstantModel
-from hiphive.structure_generation import generate_rattled_structures, generate_phonon_rattled_structures
 from hiphive.utilities import prepare_structures
-from trainstation import Optimizer
-from hiphive import ForceConstants
+from hiphive.structure_generation import  generate_phonon_rattled_structures
+from hiphive_utilities import constant_rattle, shuffle_split_cv, least_squares
 
 # load the info file
 with open(prefix + ".info","rb") as f:
     calculator, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
-# load the fcp
-fcp = ForceConstantPotential.read(prefix + '.fcn')
-
-# load the LR fc2, if present
+fcp = ForceConstantPotential.read(f'{prefix}.fcn')
 fc2_LR = None
 if os.path.isfile(prefix + ".fc2_lr"):
     with open(prefix + ".fc2_lr","rb") as f:
-        fc2_LR = pickle.load(f)
-        fc2_LR = fc2_LR * fc_factor ## return eV/Ang**2
-# build the cs for the schp calculation, force constants, and calculator
+        fc2_LR = pickle.load(f) * fc_factor
+
+## por el motivo de antes habrai que uestimar el cutoff en lugar de usar estimate_cutoff
 cs = ClusterSpace(cell,[estimate_maximum_cutoff(scel)-1e-4])
 fcs = fcp.get_force_constants(scel)
 calc = ForceConstantCalculator(fcs)
-
 # just in case an FC file is read automatically by phonopy
 phcel.force_constants = np.zeros((len(scel), len(scel), 3, 3))
 
-# open output file
 fout = open(f'{prefix}.svib' ,"w")
-if restart_fc2 is not None:
-    fc2 = ForceConstants.read_phonopy(supercell=scel,fname=retart_fc2,format='hdf5')
-    fc2 = fc2.get_fc_array(order=2) * fc_factor
-else:
-    fc2 = fcp.get_force_constants(scel).get_fc_array(order=2)
 
-if fc2_LR is not None:
-    fc2 += fc2_LR
+fc2 = fcp.get_force_constants(scel).get_fc_array(order=2)
+fc2 += fc2_LR
 
 # calculate the harmonic quantities
 phcel.force_constants = fc2 / fc_factor  ## fc2 still in eV/ang**2
@@ -76,6 +68,7 @@ fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
 svib = phcel.get_thermal_properties_dict()['entropy'][0]
 
 print("\nHarmonic properties at zero temperature (kJ/mol): fvib = %.3f svib = %.3f\n" % (fvib,svib))
+##EB print iterations and structures
 print("# Anharmonic thermodynamic properties calculated with scph using",
       f"{n_structures} structures and {n_safe} iterations",file=fout)
 print("# F does not contain the anharmonic term",file=fout)
@@ -88,21 +81,22 @@ sc = StructureContainer(cs)
 fcm = ForceConstantModel(scel, cs)
 
 # generate initial model
-rattled_structures = generate_rattled_structures(scel, n_structures, 0.15)
+rattled_structures = constant_rattle(scel, n_structures, 0.15)
 rattled_structures = prepare_structures(rattled_structures, scel, calc, check_permutation=False)
+
 for structure in rattled_structures:
     sc.add_structure(structure)
 seed = int(time.time())
 print("# Random seed = %d" % seed)
+M , F = sc.get_fit_data()
+_, coefs, rmse = least_squares(M, F, verbose=0)
 
-opt = Optimizer(sc.get_fit_data(),fit_method=fit_method,train_size=train_fraction,seed=seed)
-opt.train()
 sc.delete_all_structures()
 
 # run poor man's self consistent phonon frequencies
 for t in temperatures:
     print("\nStarted scph at temperature: %.2f K" % t);
-    param_old = opt.parameters.copy()
+    param_old = coefs.copy()
     flist = []
     slist = []
     live_counter = 0
@@ -112,8 +106,9 @@ for t in temperatures:
         # generate structures with new FC2, including the LR correction
         fcm.parameters = param_old
         fc2 = fcm.get_force_constants().get_fc_array(order=2)
-        if fc2_LR is not None:
+        if os.path.isfile(prefix + ".fc2_lr"):
             fc2 += fc2_LR
+
         phonon_rattled_structures = generate_phonon_rattled_structures(scel,fc2,n_structures,t)
 
         # calculate forces with FCn, without LR correction
@@ -122,18 +117,21 @@ for t in temperatures:
         # build the new structurecontainer and fit new model
         for structure in phonon_rattled_structures:
             sc.add_structure(structure)
-        opt = Optimizer(sc.get_fit_data(), fit_method=fit_method,
-                train_size=train_fraction, seed=seed+i)
 
-        opt.train()
+        M , F = sc.get_fit_data()
+        if (validation_nsplit == 0):
+            _, coefs, rmse = least_squares(M, F, verbose=0)
+        else:
+            _, coefs, rmse = shuffle_split_cv(M, F, n_splits=validation_nsplit,
+                                              test_size=(1 -train_fraction),verbose=0)
         sc.delete_all_structures()
 
         # calculate fvib
-        param_new = alpha * opt.parameters + (1-alpha) * param_old
+        param_new = alpha * coefs + (1-alpha) * param_old
         fc2 = ForceConstantPotential(cs, param_new).get_force_constants(scel).get_fc_array(order=2) # only short-range
-
-        if fc2_LR is not None:
+        if os.path.isfile(prefix + ".fc2_lr"):
             fc2 += fc2_LR
+
         phcel.force_constants = fc2 / fc_factor  ## fc2 still in eV/ang**2
         phcel.run_mesh([20] * 3)
         phcel.run_thermal_properties(temperatures=[t])
@@ -143,16 +141,16 @@ for t in temperatures:
 
         ## check whether to stop if negative/imaginary frequencies
         fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
+        svib = phcel.get_thermal_properties_dict()['entropy'][0]
         if np.isnan(fvib):
             if dead_counter == n_dead//2:
                 live_counter = 0
             rand = 0.4
-            param_old = rand * opt.parameters + (1-rand)*param_old
+            param_old = rand * coefs + (1-rand)*param_old
             dead_counter += 1
         else:
             if live_counter == n_dead // 2:
                 dead_counter = 0
-            svib = phcel.get_thermal_properties_dict()['entropy'][0]
             flist.append(fvib)
             slist.append(svib)
             param_old = param_new

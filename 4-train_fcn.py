@@ -5,10 +5,9 @@
 ## Output: prefix.fcn
 
 ## input block ##
-prefix="blah" ## prefix for the generated files
-outputs="blah*/*.out" # regular expression for the files
-fit_method="rfe" # training method
-validation_nsplit=5 # number of splits in validation
+prefix="mgo" ## prefix for the generated files
+outputs="mgo-*/*.out" # regular expression for the files
+validation_nsplit=5 # number of splits in validation (set to 0 for plain least-squares)
 train_fraction=0.8 # fraction of data used in training/validation split
 #################
 
@@ -19,8 +18,7 @@ import numpy as np
 import ase
 from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
-from trainstation import CrossValidationEstimator
-from collections import defaultdict
+from hiphive_utilities import shuffle_split_cv, least_squares ## M, F , n_splits 10, test_size 0.2
 
 # load the info file
 with open(prefix + ".info","rb") as f:
@@ -62,17 +60,15 @@ else:
     M, F = sc.get_fit_data()
 
 ## run the training
-cve = CrossValidationEstimator((M, F),fit_method=fit_method,validation_method='shuffle-split',
-                               n_splits=validation_nsplit,train_size=train_fraction,
-                               test_size=1-train_fraction)
-print("--- training ---")
-cve.validate()
-print("validation_splits = ",cve.rmse_validation_splits)
-cve.train()
-print(cve)
+if (validation_nsplit <= 0):
+    _, coefs, rmse = least_squares(M, F)
+else:
+    _, coefs, rmse = shuffle_split_cv(M, F, n_splits=validation_nsplit,
+                                      test_size=(1-train_fraction))
+
 
 ## save the force constant potential
-fcp = ForceConstantPotential(cs, cve.parameters)
+fcp = ForceConstantPotential(cs, coefs)
 fcp.write(prefix + '.fcn')
 print("--- force constant potential details ---")
 print(fcp)
@@ -83,7 +79,7 @@ if os.path.isfile(prefix + ".fc2_lr"):
     fc2 += fc2_LR
 fc2 = fc2 / fc_factor
 
-#### write the fc2 to a file?
+#### write the harmonic fc2 to a file
 ## from phonopy.file_IO import write_FORCE_CONSTANTS, write_force_constants_to_hdf5
 ## write_FORCE_CONSTANTS(fc2)
 
@@ -91,6 +87,12 @@ phcel.set_force_constants(fc2)
 phcel.run_mesh([20] * 3)
 phcel.run_thermal_properties(temperatures=300)
 
+#### write the harmonic phDOS to a file?
+## phcel.run_total_dos()
+## phcel.write_total_dos(filename='qha-dos.dat')
+
 fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
 svib = phcel.get_thermal_properties_dict()['entropy'][0]
-print("\nHarmonic properties at 300 K (kJ/mol): fvib = %.3f svib = %.3f\n" % (fvib,svib))
+
+print("\nQuality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, np.mean(np.abs(F))*1000))
+print("Harmonic properties at 300 K (kJ/mol): fvib = %.3f svib = %.3f\n" % (fvib,svib))

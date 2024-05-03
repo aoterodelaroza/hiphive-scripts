@@ -1,4 +1,4 @@
-## 4-fit_debye_model.py: fit extended debye model to S(T) data and obtain
+## 6-fit_debye_model.py: fit extended debye model to S(T) data and obtain
 ## fit parameters and list of (T,F,S,Cv)
 ##
 ## Input: prefix.info, prefix.svib
@@ -7,9 +7,9 @@
 import numpy as np
 
 ## input block ##
-prefix="blah" ## prefix for the generated files
-temperatures = np.arange(0, 2600, 1) # extended temperature list
-npoly=4 # number of parameters in the polynomial part of extended Debye
+prefix="mgo" ## prefix for the generated files
+temperatures = np.arange(0, 3010, 10) # extended temperature list
+npoly=3 # number of parameters in the polynomial part of extended Debye
 #################
 
 import pickle
@@ -140,7 +140,8 @@ with open(prefix + ".xdebye","w") as f:
 
 ## output the temperatures in thermal-data
 with open(prefix + ".thermal-data","w") as f:
-    conver = scipy.constants.physical_constants['Hartree energy in eV'][0]
+    #conver = scipy.constants.physical_constants['Hartree energy in eV'][0] ## results in eV
+    conver = 1 ## results in Hartree
     tlist = np.array(temperatures)
     fd = fdebye_ext(tlist,res.x) * conver
     sd = np.maximum(sdebye_ext(tlist,res.x) * conver,1e-11)

@@ -8,9 +8,9 @@
 ## --> optional: prefix.fc2_LR
 
 ## input block ##
-prefix="blah" ## prefix for the generated files
+prefix="mgo" ## prefix for the generated files
 eq_structure="mgo.scf.in" ## the equilibrium structure
-ncell = (3 ,3 ,3) ## the supercell size
+ncell = [3,0,0, 0,3,0, 0,0,3] ## nice supercell
 calculator = "espresso-in" ## program used for the calculations, case insensitive (vasp,espresso-in)
 #################
 
@@ -24,6 +24,10 @@ import numpy as np
 from phonopy.interface.calculator import get_default_physical_units, get_force_constant_conversion_factor
 from hiphive.cutoffs import estimate_maximum_cutoff
 from phonopy.file_IO import parse_BORN
+
+## working with nice supercell
+ncell = np.array(ncell)
+ncell = ncell.reshape((3, 3))
 
 # process the calculator
 calculator = calculator.lower()
@@ -39,10 +43,13 @@ cell = ase.io.read(eq_structure)
 
 # supercell: make one phonopy and VASP like
 units = get_default_physical_units(phcalc)
-ph = phonopy.load(unitcell_filename=eq_structure,supercell_matrix=list(ncell),calculator=phcalc)
+ph = phonopy.load(unitcell_filename=eq_structure,supercell_matrix=ncell.T,calculator=phcalc)
 phcel = ph ## save the phonopy cell (problems with primitive cells)
 ph = ph.supercell
 scel = ase.Atoms(symbols=ph.symbols,scaled_positions=ph.scaled_positions,cell=ph.cell*units["distance_to_A"],pbc=[1,1,1])
+
+## additional to check if supercell is ok
+## ase.io.write('supercell.structure',scel,format=calculator)
 
 # if BORN file exists, read the NAC parameters
 if os.path.isfile("BORN"):
@@ -59,9 +66,10 @@ if os.path.isfile("BORN"):
         pickle.dump(fc2_LR, f)
 
 # write the max cutoff to output
-print("maximum cutoff (angstrom): ",estimate_maximum_cutoff(scel))
+print("Maximum cutoff (angstrom): ",estimate_maximum_cutoff(scel))
 fc_factor = get_force_constant_conversion_factor(units['force_constants_unit'],interface_mode='vasp')
-print(f'FC factor to eV/ang**2: {fc_factor}')
+print(f'FC unit conversion factor to eV/ang**2: {fc_factor}')
+
 # create the info file
 with open(prefix + ".info","wb") as f:
     pickle.dump([calculator.lower(), phcalc, ncell, cell, scel, fc_factor,
