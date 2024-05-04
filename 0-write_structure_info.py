@@ -12,6 +12,7 @@ prefix="mgo" ## prefix for the generated files
 eq_structure="mgo.scf.in" ## the equilibrium structure
 ncell = [3,0,0, 0,3,0, 0,0,3] ## nice supercell
 calculator = "espresso-in" ## program used for the calculations, case insensitive (vasp,espresso-in,aims)
+maximum_cutoff = 6.384 ## maximum cutoff for this crystal (angstrom, NEWCELL NICE 1 on supercell)
 #################
 
 import os
@@ -22,7 +23,6 @@ import ase.build
 import phonopy
 import numpy as np
 from phonopy.interface.calculator import get_default_physical_units, get_force_constant_conversion_factor
-from hiphive.cutoffs import estimate_maximum_cutoff
 from phonopy.file_IO import parse_BORN
 
 ## working with nice supercell
@@ -70,12 +70,11 @@ if os.path.isfile("BORN"):
     with open(prefix + ".fc2_lr","wb") as f:
         pickle.dump(fc2_LR, f)
 
-# write the max cutoff to output
-print("Maximum cutoff (angstrom): ",estimate_maximum_cutoff(scel))
+# write the FC conversion factor to output
 fc_factor = get_force_constant_conversion_factor(units['force_constants_unit'],interface_mode='vasp')
 print(f'FC unit conversion factor to eV/ang**2: {fc_factor}')
 
 # create the info file
 with open(prefix + ".info","wb") as f:
-    pickle.dump([calculator.lower(), phcalc, ncell, cell, scel, fc_factor,
+    pickle.dump([calculator.lower(), maximum_cutoff, phcalc, ncell, cell, scel, fc_factor,
                  phcel],f)

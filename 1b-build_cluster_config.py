@@ -15,7 +15,7 @@ import numpy as np
 # load the info file
 cutoffs[0] = np.trunc(cutoffs[0]*100)/100 ## truncate to the 2nd decimal place
 with open(prefix + ".info","rb") as f:
-    calculator, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
 # build the cluster and save
 cs = ClusterSpace(cell, cutoffs)

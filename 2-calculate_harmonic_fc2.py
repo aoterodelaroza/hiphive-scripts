@@ -18,17 +18,14 @@ import ase
 import os
 from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
-from hiphive.cutoffs import estimate_maximum_cutoff
 from hiphive_utilities import least_squares
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
 # build cluster space with only fc2
-# esto puede ser problematico en cristales moleculares, ya que no calculaba
-# bien el maximo con estimate_maximum_cutoff
-cutoffs = [estimate_maximum_cutoff(scel)-1e-4]
+cutoffs = [maximum_cutoff]
 cs = ClusterSpace(cell, cutoffs)
 
 # read the forces and build the structure container

@@ -22,7 +22,7 @@ from hiphive_utilities import shuffle_split_cv, least_squares ## M, F , n_splits
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
 # read the cluster configuration
 with open(prefix + ".cs","rb") as f:

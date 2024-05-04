@@ -31,7 +31,6 @@ import time
 import pickle
 from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive import ForceConstants
-from hiphive.cutoffs import estimate_maximum_cutoff
 from hiphive.calculators import ForceConstantCalculator
 from hiphive.force_constant_model import ForceConstantModel
 from hiphive.utilities import prepare_structures
@@ -40,7 +39,7 @@ from hiphive_utilities import constant_rattle, shuffle_split_cv, least_squares
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
 fcp = ForceConstantPotential.read(f'{prefix}.fcn')
 fc2_LR = None
@@ -48,11 +47,10 @@ if os.path.isfile(prefix + ".fc2_lr"):
     with open(prefix + ".fc2_lr","rb") as f:
         fc2_LR = pickle.load(f) * fc_factor
 
-## por el motivo de antes habrai que uestimar el cutoff en lugar de usar estimate_cutoff
-cs = ClusterSpace(cell,[estimate_maximum_cutoff(scel)-1e-4])
+# just in case an FC file is read automatically by phonopy
+cs = ClusterSpace(cell,[maximum_cutoff])
 fcs = fcp.get_force_constants(scel)
 calc = ForceConstantCalculator(fcs)
-# just in case an FC file is read automatically by phonopy
 phcel.force_constants = np.zeros((len(scel), len(scel), 3, 3))
 
 fout = open(f'{prefix}.svib' ,"w")
