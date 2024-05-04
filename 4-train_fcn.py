@@ -16,6 +16,7 @@ from glob import glob
 import pickle
 import numpy as np
 import ase
+import time
 from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
 from hiphive_utilities import shuffle_split_cv, least_squares ## M, F , n_splits 10, test_size 0.2
@@ -27,6 +28,11 @@ with open(prefix + ".info","rb") as f:
 # read the cluster configuration
 with open(prefix + ".cs","rb") as f:
     cutoffs,cs = pickle.load(f)
+
+# initialize random seed
+seed = int(time.time())
+print(f'Initialized random seed: {seed}')
+rs = np.random.RandomState(seed)
 
 # read the forces and build the structure container
 sc = StructureContainer(cs)
@@ -64,8 +70,7 @@ if (validation_nsplit <= 0):
     _, coefs, rmse = least_squares(M, F)
 else:
     _, coefs, rmse = shuffle_split_cv(M, F, n_splits=validation_nsplit,
-                                      test_size=(1-train_fraction))
-
+                                      test_size=(1-train_fraction),seed=rs)
 
 ## save the force constant potential
 fcp = ForceConstantPotential(cs, coefs)

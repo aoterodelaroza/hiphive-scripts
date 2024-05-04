@@ -4,20 +4,19 @@ This module contains new support/utility functions.
 """
 import numpy as np
 def constant_rattle(atoms, n_structures, amplitude, seed=None):
-    import time
-    if not seed:
+    if seed is None:
+        import time
         seed = int(time.time())
+    if type(seed) is np.random.RandomState:
+        rs = seed
+    else:
+        rs = np.random.RandomState(seed)
 
-    ## else:
-    ##     seed = seed
-    print(f'Initial seed for rattle: {seed}')
     ## number of atoms
     N = len(atoms)
     ## list for new structures
     atoms_list = []
     for _ in range(n_structures):
-        rs = np.random.RandomState(seed)
-        seed += 1
         atoms_tmp = atoms.copy()
         rand_dir = rs.randn(3, N)
         norm = np.sqrt((rand_dir**2).sum(axis=0))
@@ -26,6 +25,7 @@ def constant_rattle(atoms, n_structures, amplitude, seed=None):
         #print(rand_dir * amplitude)
         atoms_tmp.positions += rand_dir * amplitude * 1/3
         atoms_list.append(atoms_tmp)
+
     return atoms_list
 
 def least_squares(M, F, n_jobs=-1, verbose=1, standardize=True, mean=False,
@@ -81,13 +81,16 @@ def shuffle_split_cv(M, F, n_splits=5, test_size=0.2, seed=None, verbose=1,
     """
     from sklearn.model_selection import ShuffleSplit
     from sklearn.metrics import mean_absolute_error, mean_squared_error, max_error
-    if not seed:
+    if seed is None:
         import time
         seed = int(time.time())
-    if (verbose>0):
-        print(f"Random seed: {seed}", file=fout)
+    if type(seed) is np.random.RandomState:
+        rs = seed
+    else:
+        rs = np.random.RandomState(seed)
+
     sp = ShuffleSplit(n_splits=n_splits, test_size=test_size,
-                      train_size=1-test_size, random_state=seed)
+                      train_size=1-test_size, random_state=rs)
     parameters = []
     scores = []
     maes = []

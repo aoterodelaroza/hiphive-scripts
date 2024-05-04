@@ -41,6 +41,12 @@ from hiphive_utilities import constant_rattle, shuffle_split_cv, least_squares
 with open(prefix + ".info","rb") as f:
     calculator, maximum_cutoff, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
+# initialize random seed
+seed = int(time.time())
+print(f'Initialized random seed: {seed}')
+rs = np.random.RandomState(seed)
+
+# read fcn and fc2_lr
 fcp = ForceConstantPotential.read(f'{prefix}.fcn')
 fc2_LR = None
 if os.path.isfile(prefix + ".fc2_lr"):
@@ -80,13 +86,11 @@ sc = StructureContainer(cs)
 fcm = ForceConstantModel(scel, cs)
 
 # generate initial model
-rattled_structures = constant_rattle(scel, n_structures, 0.15)
+rattled_structures = constant_rattle(scel, n_structures, 0.15, rs)
 rattled_structures = prepare_structures(rattled_structures, scel, calc, check_permutation=False)
 
 for structure in rattled_structures:
     sc.add_structure(structure)
-seed = int(time.time())
-print("# Random seed = %d" % seed)
 M , F = sc.get_fit_data()
 _, coefs, rmse = least_squares(M, F, verbose=0)
 
@@ -122,7 +126,7 @@ for t in temperatures:
             _, coefs, rmse = least_squares(M, F, verbose=0)
         else:
             _, coefs, rmse = shuffle_split_cv(M, F, n_splits=validation_nsplit,
-                                              test_size=(1 -train_fraction),verbose=0)
+                                              test_size=(1 -train_fraction),seed=rs,verbose=0)
         sc.delete_all_structures()
 
         # calculate fvib

@@ -25,6 +25,7 @@ import math
 import pickle
 import os
 import ase
+import time
 import numpy as np
 from phonopy.interface.calculator import get_default_displacement_distance, get_default_physical_units
 from hiphive.structure_generation import generate_rattled_structures
@@ -34,6 +35,10 @@ with open(prefix + ".info","rb") as f:
     calculator, maximum_cutoff, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 units = get_default_physical_units(phcalc)
 
+# initialize random seed
+seed = int(time.time())
+print("# Initialize random seed = %d" % seed)
+
 ## Get the displacement distance and get the number of structures created by phonopy
 phdist = get_default_displacement_distance(phcalc)
 phcel.generate_displacements(distance=phdist)
@@ -41,7 +46,7 @@ n_structures = max(math.ceil(len(phcel.supercells_with_displacements)/3),1)
 
 ## Generate rattled structures
 rattle_std = phdist * units["distance_to_A"]
-structures = generate_rattled_structures(scel, n_structures, rattle_std)
+structures = generate_rattled_structures(scel, n_structures, rattle_std, seed)
 
 for iz in enumerate(structures):
     name = 'harmonic' + "-%d" % iz[0]
