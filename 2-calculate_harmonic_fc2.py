@@ -8,7 +8,7 @@
 
 ## input block ##
 prefix="mgo" ## prefix for the generated files
-outputs="harmonic-*/*.out" ## regular expression for the files
+outputs="harmonic-*/*.out" ## regular expression for the files (QE,aims=*.out,VASP=*.xml)
 #################
 
 from glob import glob

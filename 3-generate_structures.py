@@ -7,7 +7,6 @@
 prefix="mgo" ## prefix for the generated files
 fc2_phonopy = None ## if given, read the FC2s from phonopy (FORCE_CONSTANTS file)
 rattle = [(500, 20)] ## rattle type: list of (T,nstruct)
-
 out_kwargs = {
     'prefix': 'crystal',
     'pseudo_dir': '../..',
@@ -19,6 +18,7 @@ out_kwargs = {
     'pseudopotentials': {'Sr': 'sr.UPF', 'Ti': 'ti.UPF', 'O': 'o.UPF'},
     'kpts': (3, 3, 3),
 } ## pass this down to ASE (example for QE)
+## out_kwargs = {} ## pass this down to ASE (example for VASP,FHIaims)
 #################
 
 import os
@@ -54,4 +54,6 @@ for rr in rattle:
             filename = f"{dirname}/POSCAR"
         elif calculator == "espresso-in":
             filename = f'{dirname}/{dirname}.scf.in'
+        elif calculator == "aims":
+            filename = f'{dirname}/geometry.in'
         ase.io.write(filename,iz[1],format=calculator,**out_kwargs)

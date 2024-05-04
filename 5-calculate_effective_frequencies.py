@@ -58,7 +58,8 @@ phcel.force_constants = np.zeros((len(scel), len(scel), 3, 3))
 fout = open(f'{prefix}.svib' ,"w")
 
 fc2 = fcp.get_force_constants(scel).get_fc_array(order=2)
-fc2 += fc2_LR
+if fc2_LR is not None:
+    fc2 += fc2_LR
 
 # calculate the harmonic quantities
 phcel.force_constants = fc2 / fc_factor  ## fc2 still in eV/ang**2

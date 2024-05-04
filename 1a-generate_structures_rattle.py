@@ -18,6 +18,7 @@ out_kwargs = {
     'pseudopotentials': {'O': 'o.UPF', 'Mg': 'mg.UPF'},
     'kpts': (2,2,2),
 } ## pass this down to ASE (example for QE)
+## out_kwargs = {} ## pass this down to ASE (example for VASP/FHIaims)
 #################
 
 import math

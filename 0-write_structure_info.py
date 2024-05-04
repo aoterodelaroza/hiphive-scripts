@@ -11,7 +11,7 @@
 prefix="mgo" ## prefix for the generated files
 eq_structure="mgo.scf.in" ## the equilibrium structure
 ncell = [3,0,0, 0,3,0, 0,0,3] ## nice supercell
-calculator = "espresso-in" ## program used for the calculations, case insensitive (vasp,espresso-in)
+calculator = "espresso-in" ## program used for the calculations, case insensitive (vasp,espresso-in,aims)
 #################
 
 import os
@@ -33,7 +33,7 @@ ncell = ncell.reshape((3, 3))
 calculator = calculator.lower()
 if (calculator == "espresso-in"):
     phcalc = "qe"
-elif (calculator == "vasp"):
+elif (calculator == "vasp" or calculator == aims):
     phcalc = calculator
 else:
     raise Exception("unknown calculator: " + calculator)
@@ -49,7 +49,12 @@ ph = ph.supercell
 scel = ase.Atoms(symbols=ph.symbols,scaled_positions=ph.scaled_positions,cell=ph.cell*units["distance_to_A"],pbc=[1,1,1])
 
 ## additional to check if supercell is ok
-## ase.io.write('supercell.structure',scel,format=calculator)
+if calculator == "vasp":
+    ase.io.write('supercell.POSCAR',scel,format=calculator)
+elif calculator == "espresso-in":
+    ase.io.write('supercell.scf.in',scel,format=calculator)
+elif calculator == "aims":
+    ase.io.write('supercell.geometry.in',scel,format=calculator)
 
 # if BORN file exists, read the NAC parameters
 if os.path.isfile("BORN"):
