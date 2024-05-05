@@ -33,7 +33,7 @@ ncell = ncell.reshape((3, 3))
 calculator = calculator.lower()
 if (calculator == "espresso-in"):
     phcalc = "qe"
-elif (calculator == "vasp" or calculator == aims):
+elif (calculator == "vasp" or calculator == "aims"):
     phcalc = calculator
 else:
     raise Exception("unknown calculator: " + calculator)
