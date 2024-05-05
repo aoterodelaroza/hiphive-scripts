@@ -13,6 +13,7 @@ eq_structure="mgo.scf.in" ## the equilibrium structure
 ncell = [3,0,0, 0,3,0, 0,0,3] ## nice supercell
 calculator = "espresso-in" ## program used for the calculations, case insensitive (vasp,espresso-in,aims)
 maximum_cutoff = 6.384 ## maximum cutoff for this crystal (angstrom, NEWCELL NICE 1 on supercell)
+acoustic_sum_rules = True # whether to use acoustic sum rules (fewer parameters, much slower)
 #################
 
 import os
@@ -76,5 +77,5 @@ print(f'FC unit conversion factor to eV/ang**2: {fc_factor}')
 
 # create the info file
 with open(prefix + ".info","wb") as f:
-    pickle.dump([calculator.lower(), maximum_cutoff, phcalc, ncell, cell, scel, fc_factor,
+    pickle.dump([calculator.lower(), maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor,
                  phcel],f)

@@ -29,7 +29,7 @@ from hiphive.structure_generation import generate_phonon_rattled_structures
 
 # create the info file
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
 # 2nd-order force constant (text-mode), need to be in eV/ang**2
 if (fc2_phonopy):

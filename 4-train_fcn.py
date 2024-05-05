@@ -17,13 +17,13 @@ import pickle
 import numpy as np
 import ase
 import time
-from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
+from hiphive import StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
 from hiphive_utilities import shuffle_split_cv, least_squares ## M, F , n_splits 10, test_size 0.2
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
 # read the cluster configuration
 with open(prefix + ".cs","rb") as f:

@@ -39,7 +39,7 @@ from hiphive_utilities import constant_rattle, shuffle_split_cv, least_squares
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
 # initialize random seed
 seed = int(time.time())
@@ -54,7 +54,7 @@ if os.path.isfile(prefix + ".fc2_lr"):
         fc2_LR = pickle.load(f) * fc_factor
 
 # just in case an FC file is read automatically by phonopy
-cs = ClusterSpace(cell,[maximum_cutoff])
+cs = ClusterSpace(cell,[maximum_cutoff], acoustic_sum_rules=acoustic_sum_rules)
 fcs = fcp.get_force_constants(scel)
 calc = ForceConstantCalculator(fcs)
 phcel.force_constants = np.zeros((len(scel), len(scel), 3, 3))

@@ -20,7 +20,7 @@ from pygsl.testing.sf import debye_3 as D3
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 z = len(cell.get_chemical_symbols()) / len(phcel.primitive.masses)
 kB = scipy.constants.k / scipy.constants.physical_constants['hartree-joule relationship'][0] # Ha/K
 natom = len(cell)

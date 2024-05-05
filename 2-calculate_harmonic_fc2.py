@@ -22,11 +22,11 @@ from hiphive_utilities import least_squares
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
 
 # build cluster space with only fc2
 cutoffs = [maximum_cutoff]
-cs = ClusterSpace(cell, cutoffs)
+cs = ClusterSpace(cell, cutoffs, acoustic_sum_rules=acoustic_sum_rules)
 
 # read the forces and build the structure container
 sc = StructureContainer(cs)
