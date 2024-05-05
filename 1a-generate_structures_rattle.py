@@ -57,4 +57,6 @@ for iz in enumerate(structures):
         filename = name + "/POSCAR"
     elif calculator == "espresso-in":
         filename = name + "/" + name + ".scf.in"
+    elif calculator == "aims":
+        filename = name + "/geometry.in"
     ase.io.write(filename,iz[1],format=calculator,**out_kwargs)
