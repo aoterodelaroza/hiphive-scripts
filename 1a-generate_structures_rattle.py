@@ -28,7 +28,7 @@ import ase
 import time
 import numpy as np
 from phonopy.interface.calculator import get_default_displacement_distance, get_default_physical_units
-from hiphive.structure_generation import generate_rattled_structures
+from hiphive_utilities import constant_rattle
 
 # read the info file
 with open(prefix + ".info","rb") as f:
@@ -38,6 +38,7 @@ units = get_default_physical_units(phcalc)
 # initialize random seed
 seed = int(time.time())
 print("# Initialize random seed = %d" % seed)
+rs = np.random.RandomState(seed)
 
 ## Get the displacement distance and get the number of structures created by phonopy
 phdist = get_default_displacement_distance(phcalc)
@@ -46,7 +47,7 @@ n_structures = max(math.ceil(len(phcel.supercells_with_displacements)/3),1)
 
 ## Generate rattled structures
 rattle_std = phdist * units["distance_to_A"]
-structures = generate_rattled_structures(scel, n_structures, rattle_std, seed)
+structures = constant_rattle(scel, n_structures, rattle_std, rs)
 
 for iz in enumerate(structures):
     name = 'harmonic' + "-%d" % iz[0]
