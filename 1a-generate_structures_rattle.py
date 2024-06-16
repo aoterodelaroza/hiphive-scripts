@@ -24,7 +24,7 @@ out_kwargs = {
 import math
 import pickle
 import os
-import ase
+import ase, ase.io
 import time
 import numpy as np
 from phonopy.interface.calculator import get_default_displacement_distance, get_default_physical_units
