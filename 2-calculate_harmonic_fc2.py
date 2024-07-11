@@ -7,7 +7,7 @@
 ## Output: prefix.fc2_harmonic
 
 ## input block ##
-prefix="mgo" ## prefix for the generated files
+prefix="blah" ## prefix for the generated files
 outputs="harmonic-*/*.out" ## regular expression for the files (QE,aims=*.out,VASP=*.xml)
 #################
 

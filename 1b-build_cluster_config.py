@@ -4,7 +4,7 @@
 ## Output: prefix.cs
 
 ## input block ##
-prefix="mgo" ## prefix for the generated files
+prefix="blah" ## prefix for the generated files
 cutoffs = [6.32, 3.00] # list of cutoffs [2nd,3rd,...] in angstrom
 #################
 

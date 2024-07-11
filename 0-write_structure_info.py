@@ -8,8 +8,8 @@
 ## --> optional: prefix.fc2_LR
 
 ## input block ##
-prefix="mgo" ## prefix for the generated files
-eq_structure="mgo.scf.in" ## the equilibrium structure
+prefix="blah" ## prefix for the generated files
+eq_structure="blah.scf.in" ## the equilibrium structure
 ncell = [3,0,0, 0,3,0, 0,0,3] ## nice supercell
 calculator = "espresso-in" ## program used for the calculations, case insensitive (vasp,espresso-in,aims)
 maximum_cutoff = 6.384 ## maximum cutoff for this crystal (angstrom, NEWCELL NICE 1 on supercell)

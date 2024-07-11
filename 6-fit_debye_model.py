@@ -7,7 +7,7 @@
 import numpy as np
 
 ## input block ##
-prefix="mgo" ## prefix for the generated files
+prefix="blah" ## prefix for the generated files
 temperatures = np.arange(0, 3010, 10) # extended temperature list
 npoly=3 # number of parameters in the polynomial part of extended Debye
 #################

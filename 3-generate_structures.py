@@ -4,7 +4,7 @@
 ## Output: a number of input structures in prefix*/
 
 ## input block ##
-prefix="mgo" ## prefix for the generated files
+prefix="blah" ## prefix for the generated files
 fc2_phonopy = None ## if given, read the FC2s from phonopy (FORCE_CONSTANTS file)
 rattle = [(500, 20)] ## rattle type: list of (T,nstruct)
 out_kwargs = {

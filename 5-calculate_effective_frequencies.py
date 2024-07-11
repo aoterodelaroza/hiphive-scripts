@@ -10,20 +10,20 @@
 import numpy as np
 
 ## input block ##
-prefix="mgo" ## prefix for the generated files
+prefix="blah" ## prefix for the generated files
 n_structures = 10 # number of structures used in scph
-validation_nsplit=5 # number of splits in validation (set to 0 for plain least-squares)
+validation_nsplit=0 # number of splits in validation (set to 0 for plain least-squares)
 train_fraction=0.8 # fraction of data used in training/validation split
-temperatures = [100,200,300,400,500] # temperature list (0 is always included) eg: np.arange(440, 0, -10)
+temperatures = np.arange(100, 2700, 100) # temperature list (0 is always included) eg: np.arange(440, 0, -10)
 write_fc2eff = False # write the second-order effective force constants file (prefix-temp.fc2_eff)
 #################
 
 ## details of SCPH ##
 alpha = 0.2 # damping factor for the parameters in the scph iterations
-n_max = 300 # max number of steps in scph
-n_safe = 15 # minimum number of steps required to have real frequencies before averaging
-n_dead = 5 # crash after n_dead with imaginary frequencies
-n_last = 10 # n_last steps are used for fvib, svib, etc. averages
+n_max = 100 # max number of steps in scph
+n_safe = 5 # minimum number of steps required to have real frequencies before averaging
+n_dead = 3 # crash after n_dead with imaginary frequencies
+n_last = 30 # n_last steps are used for fvib, svib, etc. averages
 #################
 
 import os
@@ -100,27 +100,24 @@ sc.delete_all_structures()
 for t in temperatures:
     print("\nStarted scph at temperature: %.2f K" % t);
     param_old = coefs.copy()
-    flist = []
-    slist = []
-    live_counter = 0
-    dead_counter = 0
-    for i in range(max(n_max,1)):
-
+    flist, slist = [], []
+    counter_n_max, counter_n_dead, counter_n_safe = 0, 0, 0 
+    while counter_n_max < n_max:
+        counter_n_max += 1
         # generate structures with new FC2, including the LR correction
         fcm.parameters = param_old
         fc2 = fcm.get_force_constants().get_fc_array(order=2)
+
         if os.path.isfile(prefix + ".fc2_lr"):
             fc2 += fc2_LR
-
         phonon_rattled_structures = generate_phonon_rattled_structures(scel,fc2,n_structures,t)
-
         # calculate forces with FCn, without LR correction
         phonon_rattled_structures = prepare_structures(phonon_rattled_structures, scel, calc, check_permutation=False)
-
+ 
         # build the new structurecontainer and fit new model
         for structure in phonon_rattled_structures:
             sc.add_structure(structure)
-
+ 
         M , F = sc.get_fit_data()
         if (validation_nsplit == 0):
             _, coefs, rmse = least_squares(M, F, verbose=0)
@@ -128,65 +125,62 @@ for t in temperatures:
             _, coefs, rmse = shuffle_split_cv(M, F, n_splits=validation_nsplit,
                                               test_size=(1 -train_fraction),seed=rs,verbose=0)
         sc.delete_all_structures()
-
+ 
         # calculate fvib
         param_new = alpha * coefs + (1-alpha) * param_old
         fc2 = ForceConstantPotential(cs, param_new).get_force_constants(scel).get_fc_array(order=2) # only short-range
         if os.path.isfile(prefix + ".fc2_lr"):
             fc2 += fc2_LR
-
+ 
         phcel.force_constants = fc2 / fc_factor  ## fc2 still in eV/ang**2
         phcel.run_mesh([20] * 3)
-        phcel.run_thermal_properties(temperatures=[t])
-
+        phcel.run_thermal_properties(temperatures=[t], cutoff_frequency=-10.0)
         x_new_norm = np.linalg.norm(param_new)
         delta_x_norm = np.linalg.norm(param_old-param_new)
-
         ## check whether to stop if negative/imaginary frequencies
         fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
         svib = phcel.get_thermal_properties_dict()['entropy'][0]
-        if np.isnan(fvib):
-            if dead_counter == n_dead//2:
-                live_counter = 0
-            rand = 0.4
-            param_old = rand * coefs + (1-rand)*param_old
-            dead_counter += 1
+        ## counter_n_max, counter_n_dead, counter_n_safe
+        # if svib is not real
+        if np.isnan(svib):
+            counter_n_dead += 1
+            ## harder criteria for safe results
+            if counter_n_dead >= n_safe*0.75:
+                counter_n_safe = 0
+            param_old = 0.4 * coefs + (1 - 0.4)*param_old
         else:
-            if live_counter == n_dead // 2:
-                dead_counter = 0
+            counter_n_safe += 1
+            ## store Fvib and Svib
             flist.append(fvib)
             slist.append(svib)
+            ## update the model
             param_old = param_new
-            live_counter += 1
-
         ## print iteration summary
         disps = [atoms.get_array('displacements') for atoms in phonon_rattled_structures]
         disp_ave = np.mean(np.abs(disps))
         disp_max = np.max(np.abs(disps))
-        print(f'{i}: x_new = {x_new_norm:.3e}, delta_x = {delta_x_norm:.3e},',
+        print(f'{counter_n_max}: x_new = {x_new_norm:.3e},',
+              f'delta_x = {delta_x_norm:.3e},',
               f'disp_ave = {disp_ave:.5f}, fvib = {fvib:.3f},',
               f'svib = {svib:.3f}')
-
-        if dead_counter == n_dead:
-            print(f'Frequencies not converged at temperature {t}, loop ended')
-            exit()
-
-        if i == n_max-1:
-            print(f'Frequencies not converged at tempearture {t}, loop ended')
-            exit()
-
-        if live_counter == n_safe:
-            ## print last values only
+        if counter_n_dead == n_dead:
+            print(f'Frequencies not converged at temperature {t}')
+            break
+        if counter_n_safe == n_safe:
+        #     ## print last values only
             fvib = np.mean(flist[len(flist)-n_last:len(flist)])
             svib = np.mean(slist[len(slist)-n_last:len(slist)])
             fvibstd = np.std(flist[len(flist)-n_last:len(flist)])
             svibstd = np.std(slist[len(slist)-n_last:len(slist)])
+            print("Converged (K,kJ/mol,J/K/mol): T = %.2f fvib = %.3f fvibstd = %.5f svib = %.3f svibstd = %.5f" % (t,fvib,fvibstd,svib,svibstd))
+            ## write the results
+            print("%.2f %.8f %.8f %.8f %.8f" % (t,fvib,fvibstd,svib,svibstd),file=fout)
             break
-
-    # standard deviation of fvib and svib and final message
-    print("Converged (K,kJ/mol,J/K/mol): T = %.2f fvib = %.3f fvibstd = %.5f svib = %.3f svibstd = %.5f" % (t,fvib,fvibstd,svib,svibstd))
-    print("%.2f %.8f %.8f %.8f %.8f" % (t,fvib,fvibstd,svib,svibstd),file=fout)
     if write_fc2eff == True:
-        fc2 = ForceConstants.from_arrays(scel, fc2_array=(fc2 / fc_factor), fc3_array=None)
+        fc2 = ForceConstants.from_arrays(scel, fc2_array=(fc2 / fc_factor),
+                                         fc3_array=None)
         fc2.write_to_phonopy(f'./{prefix}-{t:04d}.fc2_eff', format='hdf5')
+
+    if counter_n_max == n_max:
+        print(f'Frequencies not converged at temperature {t} max iterations reached')
 fout.close()
