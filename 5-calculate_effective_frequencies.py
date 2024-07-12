@@ -58,6 +58,10 @@ cs = ClusterSpace(cell,[maximum_cutoff], acoustic_sum_rules=acoustic_sum_rules)
 fcs = fcp.get_force_constants(scel)
 calc = ForceConstantCalculator(fcs)
 phcel.force_constants = np.zeros((len(scel), len(scel), 3, 3))
+# To avoid destroy previous results
+if os.path.isfile(f'{prefix}.svib'):
+    date = time.strftime("%d-%b-%Y-%H:%M:%S", time.gmtime())
+    os.rename(f'{prefix}.svib', f'{prefix}-{date}.svib')
 
 fout = open(f'{prefix}.svib' ,"w")
 
