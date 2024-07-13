@@ -71,7 +71,7 @@ if fc2_LR is not None:
 
 # calculate the harmonic quantities
 phcel.force_constants = fc2 / fc_factor  ## fc2 still in eV/ang**2
-phcel.run_mesh([20] * 3)
+phcel.run_mesh(150.)
 phcel.run_thermal_properties(temperatures=0)
 fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
 svib = phcel.get_thermal_properties_dict()['entropy'][0]
@@ -137,7 +137,7 @@ for t in temperatures:
             fc2 += fc2_LR
  
         phcel.force_constants = fc2 / fc_factor  ## fc2 still in eV/ang**2
-        phcel.run_mesh([20] * 3)
+        phcel.run_mesh(150.)
         phcel.run_thermal_properties(temperatures=[t], cutoff_frequency=-10.0)
         x_new_norm = np.linalg.norm(param_new)
         delta_x_norm = np.linalg.norm(param_old-param_new)

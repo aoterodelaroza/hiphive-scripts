@@ -89,7 +89,7 @@ fc2 = fc2 / fc_factor
 ## write_FORCE_CONSTANTS(fc2)
 
 phcel.set_force_constants(fc2)
-phcel.run_mesh([20] * 3)
+phcel.run_mesh(150.)
 phcel.run_thermal_properties(temperatures=300)
 
 #### write the harmonic phDOS to a file?
