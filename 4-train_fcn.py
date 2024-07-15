@@ -6,7 +6,7 @@
 
 ## input block ##
 prefix="blah" ## prefix for the generated files
-outputs="blah-*/*.out" # regular expression for the files ()
+outputs=["blah-*/*.out"] # regular expression for the files ()
 validation_nsplit=5 # number of splits in validation (set to 0 for plain least-squares)
 train_fraction=0.8 # fraction of data used in training/validation split
 #################
@@ -34,9 +34,16 @@ seed = int(time.time())
 print(f'Initialized random seed: {seed}')
 rs = np.random.RandomState(seed)
 
+flist = []
+if isinstance(outputs,str):
+    flist.extend(glob(outputs))
+else:
+    for i in outputs:
+        flist.extend(glob(i))
+
 # read the forces and build the structure container
 sc = StructureContainer(cs)
-for fname in glob(outputs):
+for fname in flist:
     atoms = ase.io.read(fname)
 
     # get displacements and forces
@@ -71,6 +78,13 @@ if (validation_nsplit <= 0):
 else:
     _, coefs, rmse = shuffle_split_cv(M, F, n_splits=validation_nsplit,
                                       test_size=(1-train_fraction),seed=rs)
+
+# Calculate and print the adjusted r2
+r2 = opt.score(M,F)
+nparam = opt.n_features_in_
+ndata = F.size
+ar2 = 1- (1 - r2) * (ndata-1) / (ndata - nparam - 1)
+print("Final adjusted R2 = %.8f\n" %(ar2))
 
 ## save the force constant potential
 fcp = ForceConstantPotential(cs, coefs)
