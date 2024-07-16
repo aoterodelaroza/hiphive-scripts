@@ -74,9 +74,9 @@ else:
 
 ## run the training
 if (validation_nsplit <= 0):
-    _, coefs, rmse = least_squares(M, F)
+    opt, coefs, rmse = least_squares(M, F)
 else:
-    _, coefs, rmse = shuffle_split_cv(M, F, n_splits=validation_nsplit,
+    opt, coefs, rmse = shuffle_split_cv(M, F, n_splits=validation_nsplit,
                                       test_size=(1-train_fraction),seed=rs)
 
 # Calculate and print the adjusted r2
