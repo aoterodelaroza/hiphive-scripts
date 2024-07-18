@@ -230,3 +230,18 @@ def numpy_fit(M, F):
     F = F / factor
     print('end')
     return 1, coefs
+
+def write_negative_frequencies_file(mesh,filename):
+    from phonopy.units import THzToCm
+    print("Negative frequencies file written to: ",filename)
+
+    f = open(filename,"w")
+    print("# List of negative frequencies and q-points",file=f)
+    iqlist, ifreqlist = np.where(mesh.frequencies < 0)
+
+    for idx, (iq,ifreq) in enumerate(zip(iqlist,ifreqlist)):
+        print("%10.3f   %10.7f, %10.7f, %10.7f" % (
+            mesh.frequencies[iq][ifreq]*THzToCm,mesh._qpoints[iq][0],
+            mesh._qpoints[iq][1],mesh._qpoints[iq][2]),file=f)
+    f.close()
+

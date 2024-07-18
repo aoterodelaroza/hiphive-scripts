@@ -18,8 +18,7 @@ import ase
 import os
 from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
-from hiphive_utilities import least_squares
-from phonopy.units import THzToCm
+from hiphive_utilities import least_squares, write_negative_frequencies_file
 
 # load the info file
 with open(prefix + ".info","rb") as f:
@@ -94,17 +93,8 @@ print("Negative frequencies in mesh = %d out of %d" % (np.sum(phcel._mesh.freque
 print("Quality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, np.mean(np.abs(F))*1000))
 print("Harmonic properties at 300 K: Fvib = %.3f kJ/mol, Svib = %.3f J/K/mol" % (fvib,svib))
 
+## write negative frequencies file
 if np.sum(phcel._mesh.frequencies < 0) > 0:
-    print("Negative frequencies file written to: ",prefix + ".fc2_negative_frequencies")
-
-    f = open(prefix + ".fc2_negative_frequencies","w")
-    print("# List of negative frequencies and q-points",file=f)
-    iqlist, ifreqlist = np.where(phcel._mesh.frequencies < 0)
-
-    for idx, (iq,ifreq) in enumerate(zip(iqlist,ifreqlist)):
-        print("%10.3f   %10.7f, %10.7f, %10.7f" % (
-            phcel._mesh.frequencies[iq][ifreq]*THzToCm,phcel._mesh._qpoints[iq][0],
-            phcel._mesh._qpoints[iq][1],phcel._mesh._qpoints[iq][2]),file=f)
-    f.close()
-
+    filename = prefix + ".fc2_negative_frequencies"
+    write_negative_frequencies_file(phcel._mesh,filename)
 print()
