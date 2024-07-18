@@ -20,10 +20,10 @@ write_fc2eff = False # write the second-order effective force constants file (pr
 
 ## details of SCPH ##
 alpha = 0.2 # damping factor for the parameters in the scph iterations
-n_max = 100 # max number of steps in scph
-n_safe = 5 # minimum number of steps required to have real frequencies before averaging
-n_dead = 3 # crash after n_dead with imaginary frequencies
-n_last = 30 # n_last steps are used for fvib, svib, etc. averages
+n_max = 300 # max number of steps in scph
+n_safe = 50 # minimum number of steps required to have real frequencies before averaging
+n_dead = 35 # crash after n_dead with imaginary frequencies
+n_last = 40 # n_last steps are used for fvib, svib, etc. averages
 #################
 
 import os
