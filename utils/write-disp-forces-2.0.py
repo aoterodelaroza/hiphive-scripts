@@ -5,8 +5,8 @@ from hiphive.utilities import get_displacements
 from numpy import sqrt, loadtxt, where, array
 import matplotlib.pyplot as plt 
 
-prefix = 'july'
-outputs = 'job**/vasprun.xml'
+prefix = 'cubic'
+outputs = 'harm*/*scf.out'
 
 
 
@@ -17,7 +17,7 @@ with open(prefix + ".info","rb") as f:
 #colors = ['red', 'blue']
 #alphas = [1, 0.5]
 
-fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(6.4*1, 4.8*1))
+fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(6.4*2, 4.8*1))
 #for atom, color, alpha in zip(labels, colors, alphas):
 
 for atom in sorted(list(set(scel.get_chemical_symbols()))):
@@ -32,8 +32,8 @@ for atom in sorted(list(set(scel.get_chemical_symbols()))):
         # this is because otherwise the atoms are not in POSCAR order
         displacements = get_displacements(atoms, scel)
         displacements = [displacements[i] for i in index[0]]
-        # forces = atoms.get_forces()
-        forces = displacements
+        forces = atoms.get_forces()
+        #forces = displacements
         ## save displacements and forces to visualize (angs and ev/angs)
         for f, d in zip(forces, displacements):
             print(f"""{sqrt(d[0]**2+d[1]**2+d[2]**2):12.4f}\
@@ -43,8 +43,12 @@ for atom in sorted(list(set(scel.get_chemical_symbols()))):
 
     fout.close()
     data = loadtxt(fout_name)
-    ax.hist(data[:,0], 100, label=atom, alpha=0.7)
-    ax.set_ylabel('Counts')
-    ax.legend()
-    ax.set_xlabel('Amplitude (ang)')
+    ax[0].hist(data[:,0], 100, label=atom, alpha=0.7)
+    ax[0].set_ylabel('Counts')
+    ax[0].legend()
+    ax[0].set_xlabel('Amplitude (ang)')
+    ax[1].hist(data[:,1], 100, label=atom, alpha=0.7)
+    ax[1].set_ylabel('Counts')
+    ax[1].legend()
+    ax[1].set_xlabel('Amplitude (ang)')
     fig.savefig(f'histogram.pdf')
