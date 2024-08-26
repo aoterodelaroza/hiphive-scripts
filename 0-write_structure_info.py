@@ -44,7 +44,7 @@ cell = ase.io.read(eq_structure)
 
 # supercell: make one phonopy and VASP like
 units = get_default_physical_units(phcalc)
-ph = phonopy.load(unitcell_filename=eq_structure,supercell_matrix=ncell.T,calculator=phcalc)
+ph = phonopy.load(unitcell_filename=eq_structure,supercell_matrix=ncell.T,calculator=phcalc,produce_fc=False)
 phcel = ph ## save the phonopy cell (problems with primitive cells)
 ph = ph.supercell
 scel = ase.Atoms(symbols=ph.symbols,scaled_positions=ph.scaled_positions,cell=ph.cell*units["distance_to_A"],pbc=[1,1,1])
