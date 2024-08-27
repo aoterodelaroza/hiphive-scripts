@@ -80,7 +80,7 @@ with open(prefix + ".fc2_harmonic","wb") as f:
 
 ## update phonopy
 phcel.force_constants = fc2
-phcel.run_mesh(150.)
+phcel.run_mesh(150.,with_eigenvectors=True)
 phcel.run_thermal_properties(temperatures=300)
 fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
 svib = phcel.get_thermal_properties_dict()['entropy'][0]
@@ -88,6 +88,7 @@ svib = phcel.get_thermal_properties_dict()['entropy'][0]
 #print(phcel._mesh.frequencies[phcel._mesh.frequencies < 0])
 #print(phcel._mesh.frequencies)
 #print(phcel._mesh.qpoints)
+#phcel._mesh.write_yaml()
 print("Mesh shape = ",phcel._mesh._mesh)
 print("Negative frequencies in mesh = %d out of %d" % (np.sum(phcel._mesh.frequencies < 0),phcel._mesh.frequencies.size))
 print("Quality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, np.mean(np.abs(F))*1000))
