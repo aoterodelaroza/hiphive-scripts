@@ -26,6 +26,10 @@ import numpy as np
 from phonopy.interface.calculator import get_default_physical_units, get_force_constant_conversion_factor
 from phonopy.file_IO import parse_BORN
 
+## deactivate deprecation warnings
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 ## working with nice supercell
 ncell = np.array(ncell)
 ncell = ncell.reshape((3, 3))

@@ -18,6 +18,10 @@ import scipy.constants
 import matplotlib.pyplot as plt
 from pygsl.testing.sf import debye_3 as D3
 
+## deactivate deprecation warnings
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 # load the info file
 with open(prefix + ".info","rb") as f:
     calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)

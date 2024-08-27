@@ -20,6 +20,10 @@ from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
 from hiphive_utilities import least_squares, write_negative_frequencies_file
 
+## deactivate deprecation warnings
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 # load the info file
 with open(prefix + ".info","rb") as f:
     calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)

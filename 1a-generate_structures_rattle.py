@@ -30,6 +30,10 @@ import numpy as np
 from phonopy.interface.calculator import get_default_displacement_distance, get_default_physical_units
 from hiphive_utilities import constant_rattle
 
+## deactivate deprecation warnings
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 # read the info file
 with open(prefix + ".info","rb") as f:
     calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)

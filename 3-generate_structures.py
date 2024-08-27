@@ -27,6 +27,10 @@ import ase.io
 import hiphive as hp
 from hiphive.structure_generation import generate_phonon_rattled_structures
 
+## deactivate deprecation warnings
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 # create the info file
 with open(prefix + ".info","rb") as f:
     calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
