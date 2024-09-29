@@ -20,6 +20,10 @@ from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
 from hiphive_utilities import least_squares, write_negative_frequencies_file, least_squares_simple
 
+## deactivate deprecation warnings
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 # load the info file
 with open(prefix + ".info","rb") as f:
     calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
@@ -80,7 +84,7 @@ with open(prefix + ".fc2_harmonic","wb") as f:
 
 ## update phonopy
 phcel.force_constants = fc2
-phcel.run_mesh(150.)
+phcel.run_mesh(150.,with_eigenvectors=True)
 phcel.run_thermal_properties(temperatures=300)
 fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
 svib = phcel.get_thermal_properties_dict()['entropy'][0]
@@ -88,6 +92,7 @@ svib = phcel.get_thermal_properties_dict()['entropy'][0]
 #print(phcel._mesh.frequencies[phcel._mesh.frequencies < 0])
 #print(phcel._mesh.frequencies)
 #print(phcel._mesh.qpoints)
+#phcel._mesh.write_yaml()
 print("Mesh shape = ",phcel._mesh._mesh)
 print("Negative frequencies in mesh = %d out of %d" % (np.sum(phcel._mesh.frequencies < 0),phcel._mesh.frequencies.size))
 print("Quality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, np.mean(np.abs(F))*1000))

@@ -12,6 +12,10 @@ import pickle
 from hiphive import ClusterSpace
 import numpy as np
 
+## deactivate deprecation warnings
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 # load the info file
 cutoffs[0] = np.trunc(cutoffs[0]*100)/100 ## truncate to the 2nd decimal place
 with open(prefix + ".info","rb") as f:

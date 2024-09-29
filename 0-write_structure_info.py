@@ -26,6 +26,10 @@ import numpy as np
 from phonopy.interface.calculator import get_default_physical_units, get_force_constant_conversion_factor
 from phonopy.file_IO import parse_BORN
 
+## deactivate deprecation warnings
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 ## working with nice supercell
 ncell = np.array(ncell)
 ncell = ncell.reshape((3, 3))
@@ -44,18 +48,13 @@ cell = ase.io.read(eq_structure)
 
 # supercell: make one phonopy and VASP like
 units = get_default_physical_units(phcalc)
-ph = phonopy.load(unitcell_filename=eq_structure,supercell_matrix=ncell.T,calculator=phcalc)
+ph = phonopy.load(unitcell_filename=eq_structure,supercell_matrix=ncell.T,calculator=phcalc,produce_fc=False)
 phcel = ph ## save the phonopy cell (problems with primitive cells)
 ph = ph.supercell
 scel = ase.Atoms(symbols=ph.symbols,scaled_positions=ph.scaled_positions,cell=ph.cell*units["distance_to_A"],pbc=[1,1,1])
 
 ## additional to check if supercell is ok
-if calculator == "vasp":
-    ase.io.write('supercell.POSCAR',scel,format=calculator)
-elif calculator == "espresso-in":
-    ase.io.write('supercell.scf.in',scel,format=calculator)
-elif calculator == "aims":
-    ase.io.write('supercell.geometry.in',scel,format=calculator)
+ase.io.write('supercell.geometry.in',scel,format=calculator)
 
 # if BORN file exists, read the NAC parameters
 if os.path.isfile("BORN"):

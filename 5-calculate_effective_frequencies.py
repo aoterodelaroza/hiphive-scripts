@@ -37,6 +37,10 @@ from hiphive.utilities import prepare_structures
 from hiphive.structure_generation import  generate_phonon_rattled_structures
 from hiphive_utilities import constant_rattle, shuffle_split_cv, least_squares
 
+## deactivate deprecation warnings
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 # load the info file
 with open(prefix + ".info","rb") as f:
     calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
