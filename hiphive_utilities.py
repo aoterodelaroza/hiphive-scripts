@@ -72,6 +72,16 @@ Max Error: {max_error(F, y_pred):0.8f}
               """, file=fout)
     return opt, opt.coef_, rmse
 
+def least_squares_simple(M, F):
+    """
+    Run least squares and return the least-squares parameters and the rmse.
+    """
+
+    coefs = np.linalg.solve(M.T.dot(M),M.T.dot(F))
+    rmse = np.sqrt(np.linalg.norm(M.dot(coefs) - F)**2 / len(F))
+
+    return coefs, rmse
+
 def shuffle_split_cv(M, F, n_splits=5, test_size=0.2, seed=None, verbose=1,
                      standardize=True, last=False, fout=None):
     """

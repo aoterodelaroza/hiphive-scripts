@@ -7,7 +7,7 @@
 ## Output: prefix.fc2_harmonic
 
 ## input block ##
-prefix="blah" ## prefix for the generated files
+prefix="mgo" ## prefix for the generated files
 outputs="harmonic-*/*.out" ## regular expression for the files (QE,aims=*.out,VASP=*.xml)
 #################
 
@@ -18,7 +18,7 @@ import ase
 import os
 from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
-from hiphive_utilities import least_squares, write_negative_frequencies_file
+from hiphive_utilities import least_squares, write_negative_frequencies_file, least_squares_simple
 
 # load the info file
 with open(prefix + ".info","rb") as f:
@@ -59,7 +59,7 @@ if os.path.isfile(prefix + ".fc2_lr"):
 else:
     M, F = sc.get_fit_data()
 
-_, coefs, rmse = least_squares(M, F, verbose=1)
+coefs, rmse = least_squares_simple(M, F)
 
 ## save the force constant potential
 fcp = ForceConstantPotential(cs, coefs)
