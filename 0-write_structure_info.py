@@ -54,12 +54,7 @@ ph = ph.supercell
 scel = ase.Atoms(symbols=ph.symbols,scaled_positions=ph.scaled_positions,cell=ph.cell*units["distance_to_A"],pbc=[1,1,1])
 
 ## additional to check if supercell is ok
-if calculator == "vasp":
-    ase.io.write('supercell.POSCAR',scel,format=calculator)
-elif calculator == "espresso-in":
-    ase.io.write('supercell.scf.in',scel,format=calculator)
-elif calculator == "aims":
-    ase.io.write('supercell.geometry.in',scel,format=calculator)
+ase.io.write('supercell.geometry.in',scel,format=calculator)
 
 # if BORN file exists, read the NAC parameters
 if os.path.isfile("BORN"):
