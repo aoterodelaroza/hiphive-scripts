@@ -8,7 +8,7 @@ from glob import glob
 import numpy as np
 from hiphive import StructureContainer
 from hiphive.utilities import get_displacements
-import ase
+import ase, ase.units
 
 def constant_rattle(atoms, n_structures, amplitude, seed=None):
     """
@@ -103,23 +103,31 @@ def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
 
     ## initialize file list and matrices
     print("\n## least_squares_batch_simple ##")
-    lfile = glob(outputs)
+    ## build the file lists
+    lfile = []
+    if isinstance(outputs,str):
+        lfile.extend(glob(outputs))
+    else:
+        for i in outputs:
+            lfile.extend(glob(i))
     A = None
     b = None
     Fsum = 0
+    Fsumabs = 0
     Fnum = 0
+    nparam = cs.n_dofs
 
     # read the forces and build the structure container
     print("# name num-atoms avg-disp avg-force max-force")
-    for fname in glob(outputs):
+    for fname in lfile:
         ## read the structure and fill a structure container with just one strucutre
         sc = StructureContainer(cs)
         atoms = ase.io.read(fname)
 
         ## initialize A and b if not done already
         if A is None or b is None:
-            A = np.zeros((cs.n_dofs, cs.n_dofs))
-            b = np.zeros((cs.n_dofs,))
+            A = np.zeros((nparam, nparam))
+            b = np.zeros((nparam,))
 
         # this is because otherwise the atoms are not in POSCAR order
         displacements = get_displacements(atoms, scel)
@@ -144,8 +152,10 @@ def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
 
         A += M.T.dot(M)
         b += M.T.dot(F)
-        Fsum += np.sum(np.abs(F))
+        Fsumabs += np.sum(np.abs(F))
+        Fsum += np.sum(F)
         Fnum += len(F)
+    Fmean = Fsum / Fnum
 
     ## run the least squares to calculate coefficients
     print("## running least squares")
@@ -155,9 +165,10 @@ def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
 
     ## calculate rmse
     print("## calculating rmse")
-    rmse = 0.
+    ssq = 0.
+    sstot = 0.
     # read the forces and build the structure container
-    for fname in glob(outputs):
+    for fname in lfile:
         ## read the structure and fill a structure container with just one strucutre
         sc = StructureContainer(cs)
         atoms = ase.io.read(fname)
@@ -179,12 +190,14 @@ def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
         else:
             M, F = sc.get_fit_data()
 
-        rmse += np.sum((M.dot(coefs) - F)**2)
+        ssq += np.sum((M.dot(coefs) - F)**2)
+        sstot += np.sum((F - Fmean)**2)
     del M,F,sc,atoms,displacements,forces,atoms_tmp
-    rmse = np.sqrt(rmse / Fnum)
-    print()
+    rmse = np.sqrt(ssq / Fnum)
+    r2 = 1 - ssq / sstot
+    ar2 = 1 - (1 - r2) * (Fnum - 1) / (Fnum - nparam - 1)
 
-    return coefs, rmse, Fsum/Fnum*1000
+    return coefs, rmse, Fsumabs/Fnum*1000, r2, ar2
 
 def shuffle_split_cv(M, F, n_splits=5, test_size=0.2, seed=None, verbose=1,
                      standardize=True, last=False, fout=None):
@@ -329,7 +342,7 @@ def _n_BE(T, w_s):
 
     with np.errstate(divide='raise', over='raise'):
         try:
-            n = 1 / (np.exp(w_s / (aunits.kB * T)) - 1)
+            n = 1 / (np.exp(w_s / (ase.units.kB * T)) - 1)
         except Exception:
             n = np.zeros_like(w_s)
     return n
@@ -377,11 +390,11 @@ def _phonon_rattle(m_a, T, w2_s, e_sai, QM_statistics):
 
     prefactor_a = np.sqrt(1 / m_a).reshape(-1, 1)
     if QM_statistics:
-        hbar = aunits._hbar * aunits.J * aunits.s
+        hbar = ase.units._hbar * ase.units.J * ase.units.s
         frequencyfactor_s = np.sqrt(hbar * (0.5 + _n_BE(T, hbar * w_s)) / w_s)
     else:
         frequencyfactor_s = 1 / w_s
-        prefactor_a *= np.sqrt(aunits.kB * T)
+        prefactor_a *= np.sqrt(ase.units.kB * T)
 
     phases_s = np.random.uniform(0, 2 * np.pi, size=n_modes - 3)
     amplitudes_s = np.sqrt(-2 * np.log(1 - np.random.random(n_modes - 3)))

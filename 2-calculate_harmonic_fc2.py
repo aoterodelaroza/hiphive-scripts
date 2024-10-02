@@ -37,7 +37,7 @@ if os.path.isfile(prefix + ".fc2_lr"):
         fc2_LR = pickle.load(f) * fc_factor
 
 ## run least squares
-coefs, rmse, Favgabs = least_squares_batch_simple(outputs,cs,scel,fc2_LR)
+coefs, rmse, Favgabs, r2, ar2 = least_squares_batch_simple(outputs,cs,scel,fc2_LR)
 
 ## save the force constant potential
 fcp = ForceConstantPotential(cs, coefs)
@@ -69,6 +69,7 @@ svib = phcel.get_thermal_properties_dict()['entropy'][0]
 #phcel._mesh.write_yaml()
 print("Mesh shape = ",phcel._mesh._mesh)
 print("Negative frequencies in mesh = %d out of %d" % (np.sum(phcel._mesh.frequencies < 0),phcel._mesh.frequencies.size))
+print("Quality of the fit: r2 = %.7f, adjusted-r2 = %.7f" % (r2, ar2))
 print("Quality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, Favgabs))
 print("Harmonic properties at 300 K: Fvib = %.3f kJ/mol, Svib = %.3f J/K/mol" % (fvib,svib))
 
