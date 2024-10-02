@@ -5,10 +5,8 @@
 ## Output: prefix.fcn
 
 ## input block ##
-prefix="urea" ## prefix for the generated files
-outputs=["urea-*/*.out"] # regular expression for the files ()
-validation_nsplit=5 # number of splits in validation (set to 0 for plain least-squares)
-train_fraction=0.8 # fraction of data used in training/validation split
+prefix="mgo" ## prefix for the generated files
+outputs=["mgo-*/*.out"] # regular expression for the files ()
 #################
 
 import os
