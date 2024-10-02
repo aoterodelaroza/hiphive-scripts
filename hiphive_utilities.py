@@ -1,9 +1,17 @@
 ## already in structure generation
+
 """
 This module contains new support/utility functions.
 """
+
 import numpy as np
+
 def constant_rattle(atoms, n_structures, amplitude, seed=None):
+    """
+    Generate n_structures based on the initial structure atoms by rattling
+    the atomic positions randomly with displacements given by amplitude.
+    If seed is RandomState, use the random generator, otherwise initialize.
+    """
     if seed is None:
         import time
         seed = int(time.time())
@@ -14,15 +22,14 @@ def constant_rattle(atoms, n_structures, amplitude, seed=None):
 
     ## number of atoms
     N = len(atoms)
+
     ## list for new structures
     atoms_list = []
     for _ in range(n_structures):
         atoms_tmp = atoms.copy()
         rand_dir = rs.randn(3, N)
         norm = np.sqrt((rand_dir**2).sum(axis=0))
-        # size (N, 3)
         rand_dir = (rand_dir / norm).T
-        #print(rand_dir * amplitude)
         atoms_tmp.positions += rand_dir * amplitude * 1/3
         atoms_list.append(atoms_tmp)
 
@@ -31,6 +38,8 @@ def constant_rattle(atoms, n_structures, amplitude, seed=None):
 def least_squares(M, F, n_jobs=-1, verbose=1, standardize=True, mean=False,
                   std=True, fout=None):
     """
+    Old version of least_squares = TO BE REMOVED.
+
     StandardScaler:
         s = (x -u)/s , u = mean(x), s = std(x)
     Return the model and the parameters
@@ -74,7 +83,8 @@ Max Error: {max_error(F, y_pred):0.8f}
 
 def least_squares_simple(M, F):
     """
-    Run least squares and return the least-squares parameters and the rmse.
+    Run a simple and efficient version of least squares and return the
+    least-squares parameters and the root mean square error.
     """
 
     coefs = np.linalg.solve(M.T.dot(M),M.T.dot(F))
@@ -85,6 +95,8 @@ def least_squares_simple(M, F):
 def shuffle_split_cv(M, F, n_splits=5, test_size=0.2, seed=None, verbose=1,
                      standardize=True, last=False, fout=None):
     """
+    Shuffle-splict cross validation using least squares = TO BE REMOVED.
+
     Standard ShuffleSplit cross validation
     KFold is not available for our case as in trainstation
     method only available least-squares add if if more fitting methods are add
@@ -157,6 +169,7 @@ Max Error final: {max_error(F, y_pred):0.8f}
 def print_cv_steps(splits, scores, maes, rmses, maxs, fout=None):
     """
     Just to print the cross validation metrics of each step
+    TO BE REMOVED.
     """
     for i, score, mae, rmse, max in zip(range(splits), scores, maes, rmses, maxs):
         print(f"""============================
@@ -171,77 +184,23 @@ Max Error train: {max[0]:0.8f}
 Max Error test: {max[1]:0.8f}
 ============================""", file=fout)
 
-def least_squares_lapack(M, F, verbose=1, standardize=True,
-                         mean=False, std=True, fout=None):
+def has_negative_frequencies(freqs,threshold=10):
     """
-    StandardScaler:
-        s = (x -u)/s , u = mean(x), s = std(x)
-    Return the model and the parameters
+    Return whether there are negative frequencies in the input
+    mesh. Criterion: the average of the negative frequencies in
+    absolute value and cm-1 is above threshold.
     """
-    from sklearn.metrics import mean_absolute_error, mean_squared_error, max_error
-    from scipy.linalg import lstsq
-    from sklearn.preprocessing import StandardScaler
-    import time
+    from phonopy.units import THzToCm
 
-    print('start scaler')
-    s = StandardScaler(copy=False, with_mean=mean, with_std=std)
-    print('end scaler')
-    s.fit_transform(M)
-    factor = 1.0 / np.std(F)
-    F = F * factor
-    a = time.time()
-    print('star fit')
-    coefs, _, _, _ = lstsq(M, F, lapack_driver='gelsd')
-    print(f'end fit {time.time() - a}')
-    s.inverse_transform(M)
-    parameters = coefs / factor
-    s.transform(parameters.reshape(1, -1)).reshape(-1,) ## restore par.
-    coefs = parameters
-    #original F
-    F = F / factor
-    print('end')
-
-##     y_pred = opt.predict(M)
-##     if verbose > 0:
-##         print(f"""====================================================
-## Parameters: {opt.n_features_in_}
-## Non-zero parameters (>1e-3): {len(np.where(np.abs(opt.coef_) > 1e-3)[0])}
-## R2: {opt.score(M, F):0.8f}
-## Mean Absolute Error: {mean_absolute_error(F, y_pred):0.8f}
-## Mean Squared Error: {mean_squared_error(F, y_pred):0.8f}
-## Max Error: {max_error(F, y_pred):0.8f}
-## ====================================================
-##               """, file=fout)
-    return 1, coefs
-
-
-def numpy_fit(M, F):
-    from sklearn.metrics import mean_absolute_error, mean_squared_error, max_error
-    from sklearn.preprocessing import StandardScaler
-    from numpy.linalg import lstsq
-    import time
-
-    print('start scaler')
-    s = StandardScaler(copy=False, with_mean=False, with_std=True)
-    print('end scaler')
-    s.fit_transform(M)
-    factor = 1.0 / np.std(F)
-    F = F * factor
-    print(F.shape())
-    a = time.time()
-    print('star fit')
-    coefs, _, _, _ = lstsq(M, F)
-    print(f'end fit {time.time() - a}')
-    s.inverse_transform(M)
-    parameters = coefs / factor
-    s.transform(parameters.reshape(1, -1)).reshape(-1,) ## restore par.
-    coefs = parameters
-    #original F
-    F = F / factor
-    print('end')
-    return 1, coefs
+    mask = freqs < 0
+    nneg = np.sum(mask)
+    return (nneg > 0) and (sum(abs(freqs[mask])) * THzToCm / nneg > threshold)
 
 def write_negative_frequencies_file(mesh,filename):
+    """
+    Given a phonopy mesh, write the list of mesh points where there
+    are negative frequencies to the file filename.
+    """
     from phonopy.units import THzToCm
     print("Negative frequencies file written to: ",filename)
 
@@ -254,4 +213,156 @@ def write_negative_frequencies_file(mesh,filename):
             mesh.frequencies[iq][ifreq]*THzToCm,mesh._qpoints[iq][0],
             mesh._qpoints[iq][1],mesh._qpoints[iq][2]),file=f)
     f.close()
+
+#### TEMPORARY: this is a copy of the phonon rattle code in hiphive.structure_generation ####
+#### modified to handle negative frequencies better (set minimum frequency) ####
+
+def _n_BE(T, w_s):
+    """
+    Bose-Einstein distribution function.
+
+    Parameters
+    ---------
+    T : float
+        Temperature in Kelvin
+    w_s: numpy.ndarray
+        frequencies in eV (3*N,)
+
+    Returns
+    ------
+    Bose-Einstein distribution for each energy at a given temperature
+    """
+
+    with np.errstate(divide='raise', over='raise'):
+        try:
+            n = 1 / (np.exp(w_s / (aunits.kB * T)) - 1)
+        except Exception:
+            n = np.zeros_like(w_s)
+    return n
+
+
+def _phonon_rattle(m_a, T, w2_s, e_sai, QM_statistics):
+    """ Thermal excitation of phonon modes as described by West and
+    Estreicher, Physical Review Letters  **96**, 115504 (2006).
+
+    _s is a mode index
+    _i is a Carteesian index
+    _a is an atom index
+
+    Parameters
+    ----------
+    m_a : numpy.ndarray
+        masses (N,)
+    T : float
+        temperature in Kelvin
+    w2_s : numpy.ndarray
+        the squared frequencies from the eigenvalue problem (3*N,)
+    e_sai : numpy.ndarray
+        polarizations (3*N, N, 3)
+    QM_statistics : bool
+        if the amplitude of the quantum harmonic oscillator shoule be used
+        instead of the classical amplitude
+
+    Returns
+    -------
+    displacements : numpy.ndarray
+        shape (N, 3)
+    """
+    n_modes = 3 * len(m_a)
+
+    # skip 3 translational modes
+    argsort = np.argsort(np.abs(w2_s))
+    e_sai = e_sai[argsort][3:]
+    w2_s = w2_s[argsort][3:]
+
+    w_s = np.sqrt(np.abs(w2_s))
+
+    #### xxxx ####
+    imag_mask = w_s < 0.1
+    w_s[imag_mask] = 0.1
+
+    prefactor_a = np.sqrt(1 / m_a).reshape(-1, 1)
+    if QM_statistics:
+        hbar = aunits._hbar * aunits.J * aunits.s
+        frequencyfactor_s = np.sqrt(hbar * (0.5 + _n_BE(T, hbar * w_s)) / w_s)
+    else:
+        frequencyfactor_s = 1 / w_s
+        prefactor_a *= np.sqrt(aunits.kB * T)
+
+    phases_s = np.random.uniform(0, 2 * np.pi, size=n_modes - 3)
+    amplitudes_s = np.sqrt(-2 * np.log(1 - np.random.random(n_modes - 3)))
+
+    u_ai = prefactor_a * np.tensordot(
+            amplitudes_s * np.cos(phases_s) * frequencyfactor_s, e_sai, (0, 0))
+    return u_ai  # displacements
+
+
+class _PhononRattler:
+    """
+    Class to be able to conveniently save modes and frequencies needed
+    for phonon rattle.
+
+    Parameters
+    ----------
+    masses : numpy.ndarray
+        masses (N,)
+    force_constants : numpy.ndarray
+        second order force constant matrix, with shape `(3N, 3N)` or
+        `(N, N, 3, 3)`. The conversion will be done internally if.
+    imag_freq_factor: float
+        If a squared frequency, w2, is negative then it is set to
+        w2 = imag_freq_factor * np.abs(w2)
+    """
+    def __init__(self, masses, force_constants, imag_freq_factor=1.0):
+        n_atoms = len(masses)
+        if len(force_constants.shape) == 4:  # assume shape = (n_atoms, n_atoms, 3, 3)
+            force_constants = force_constants.transpose(0, 2, 1, 3)
+            force_constants = force_constants.reshape(3 * n_atoms, 3 * n_atoms)
+            # Now the fc should have shape = (n_atoms * 3, n_atoms * 3)
+        # Construct the dynamical matrix
+        inv_root_masses = (1 / np.sqrt(masses)).repeat(3)
+        D = np.outer(inv_root_masses, inv_root_masses)
+        D *= force_constants
+        # find frequnecies and eigenvectors
+        w2_s, e_sai = np.linalg.eigh(D)
+        # reshape to get atom index and Cartesian index separate
+        e_sai = e_sai.T.reshape(-1, n_atoms, 3)
+
+        # The three modes closest to zero are assumed to be zero, ie acoustic sum rules are assumed
+        frequency_tol = 1e-6
+        argsort = np.argsort(np.abs(w2_s))
+        w2_gamma = w2_s[argsort][:3]
+
+        # treat imaginary modes as real
+        imag_mask = w2_s < -frequency_tol
+        w2_s[imag_mask] = imag_freq_factor * np.abs(w2_s[imag_mask])
+
+        self.w2_s = w2_s
+        self.e_sai = e_sai
+        self.masses = masses
+
+    def __call__(self, atoms, T, QM_statistics):
+        """ rattle atoms by adding displacements
+
+        Parameters
+        ----------
+        atoms : ase.Atoms
+            Ideal structure to add displacements to.
+        T : float
+            temperature in Kelvin
+        """
+        u_ai = _phonon_rattle(self.masses, T, self.w2_s, self.e_sai,
+                              QM_statistics)
+        atoms.positions += u_ai
+
+def generate_phonon_rattled_structures(atoms, fc2, n_structures, temperature,
+                                       QM_statistics=False, imag_freq_factor=1.0):
+
+    structures = []
+    pr = _PhononRattler(atoms.get_masses(), fc2, imag_freq_factor)
+    for _ in range(n_structures):
+        atoms_tmp = atoms.copy()
+        pr(atoms_tmp, temperature, QM_statistics)
+        structures.append(atoms_tmp)
+    return structures
 

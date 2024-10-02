@@ -18,7 +18,7 @@ import ase
 import os
 from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
-from hiphive_utilities import least_squares, write_negative_frequencies_file, least_squares_simple
+from hiphive_utilities import write_negative_frequencies_file, least_squares_simple
 
 ## deactivate deprecation warnings
 import warnings
