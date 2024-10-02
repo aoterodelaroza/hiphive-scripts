@@ -8,7 +8,7 @@ from glob import glob
 import numpy as np
 from hiphive import StructureContainer
 from hiphive.utilities import get_displacements
-import ase
+import ase, ase.units
 
 def constant_rattle(atoms, n_structures, amplitude, seed=None):
     """
@@ -329,7 +329,7 @@ def _n_BE(T, w_s):
 
     with np.errstate(divide='raise', over='raise'):
         try:
-            n = 1 / (np.exp(w_s / (aunits.kB * T)) - 1)
+            n = 1 / (np.exp(w_s / (ase.units.kB * T)) - 1)
         except Exception:
             n = np.zeros_like(w_s)
     return n
@@ -377,11 +377,11 @@ def _phonon_rattle(m_a, T, w2_s, e_sai, QM_statistics):
 
     prefactor_a = np.sqrt(1 / m_a).reshape(-1, 1)
     if QM_statistics:
-        hbar = aunits._hbar * aunits.J * aunits.s
+        hbar = ase.units._hbar * ase.units.J * ase.units.s
         frequencyfactor_s = np.sqrt(hbar * (0.5 + _n_BE(T, hbar * w_s)) / w_s)
     else:
         frequencyfactor_s = 1 / w_s
-        prefactor_a *= np.sqrt(aunits.kB * T)
+        prefactor_a *= np.sqrt(ase.units.kB * T)
 
     phases_s = np.random.uniform(0, 2 * np.pi, size=n_modes - 3)
     amplitudes_s = np.sqrt(-2 * np.log(1 - np.random.random(n_modes - 3)))
