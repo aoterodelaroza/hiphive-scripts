@@ -19,7 +19,7 @@ import ase
 import time
 from hiphive import StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
-from hiphive_utilities import shuffle_split_cv, least_squares ## M, F , n_splits 10, test_size 0.2
+from hiphive_utilities import shuffle_split_cv, least_squares_simple
 
 ## deactivate deprecation warnings
 import warnings
@@ -78,17 +78,16 @@ else:
 
 ## run the training
 if (validation_nsplit <= 0):
-    opt, coefs, rmse = least_squares(M, F)
+    coefs, rmse = least_squares_simple(M, F)
 else:
     opt, coefs, rmse = shuffle_split_cv(M, F, n_splits=validation_nsplit,
                                       test_size=(1-train_fraction),seed=rs)
-
-# Calculate and print the adjusted r2
-r2 = opt.score(M,F)
-nparam = opt.n_features_in_
-ndata = F.size
-ar2 = 1- (1 - r2) * (ndata-1) / (ndata - nparam - 1)
-print("Final adjusted R2 = %.8f\n" %(ar2))
+    # Calculate and print the adjusted r2
+    r2 = opt.score(M,F)
+    nparam = opt.n_features_in_
+    ndata = F.size
+    ar2 = 1- (1 - r2) * (ndata-1) / (ndata - nparam - 1)
+    print("Final adjusted R2 = %.8f\n" %(ar2))
 
 ## save the force constant potential
 fcp = ForceConstantPotential(cs, coefs)
