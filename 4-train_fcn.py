@@ -5,8 +5,8 @@
 ## Output: prefix.fcn
 
 ## input block ##
-prefix="blah" ## prefix for the generated files
-outputs=["blah-*/*.out"] # regular expression for the files ()
+prefix="urea" ## prefix for the generated files
+outputs=["urea-*/*.out"] # regular expression for the files ()
 validation_nsplit=5 # number of splits in validation (set to 0 for plain least-squares)
 train_fraction=0.8 # fraction of data used in training/validation split
 #################
@@ -19,7 +19,7 @@ import ase
 import time
 from hiphive import StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
-from hiphive_utilities import shuffle_split_cv, least_squares_simple
+from hiphive_utilities import shuffle_split_cv, least_squares_batch_simple
 
 ## deactivate deprecation warnings
 import warnings
@@ -33,61 +33,14 @@ with open(prefix + ".info","rb") as f:
 with open(prefix + ".cs","rb") as f:
     cutoffs,cs = pickle.load(f)
 
-# initialize random seed
-seed = int(time.time())
-print(f'Initialized random seed: {seed}')
-rs = np.random.RandomState(seed)
-
-flist = []
-if isinstance(outputs,str):
-    flist.extend(glob(outputs))
-else:
-    for i in outputs:
-        flist.extend(glob(i))
-
-# read the forces and build the structure container
-sc = StructureContainer(cs)
-for fname in flist:
-    atoms = ase.io.read(fname)
-
-    # get displacements and forces
-    displacements = get_displacements(atoms, scel)
-    forces = atoms.get_forces()
-
-    # append to the structure container
-    atoms_tmp = scel.copy()
-    atoms_tmp.new_array('displacements', displacements)
-    atoms_tmp.new_array('forces', forces)
-    sc.add_structure(atoms_tmp)
-
-# print out some details
-print("--- structure container details ---")
-print(sc)
-print("")
-
-## remove the long-range contribution from the training data (fc2_LR written using the calculator units)
+## read the long-range FC2
+fc2_LR = None
 if os.path.isfile(prefix + ".fc2_lr"):
     with open(prefix + ".fc2_lr","rb") as f:
         fc2_LR = pickle.load(f) * fc_factor
 
-    displacements = np.array([fs.displacements for fs in sc])
-    M, F = sc.get_fit_data()
-    F -= np.einsum('ijab,njb->nia', -fc2_LR, displacements).flatten()
-else:
-    M, F = sc.get_fit_data()
-
-## run the training
-if (validation_nsplit <= 0):
-    coefs, rmse = least_squares_simple(M, F)
-else:
-    opt, coefs, rmse = shuffle_split_cv(M, F, n_splits=validation_nsplit,
-                                      test_size=(1-train_fraction),seed=rs)
-    # Calculate and print the adjusted r2
-    r2 = opt.score(M,F)
-    nparam = opt.n_features_in_
-    ndata = F.size
-    ar2 = 1- (1 - r2) * (ndata-1) / (ndata - nparam - 1)
-    print("Final adjusted R2 = %.8f\n" %(ar2))
+## run least squares
+coefs, rmse, Favgabs, r2, ar2 = least_squares_batch_simple(outputs,cs,scel,fc2_LR)
 
 ## save the force constant potential
 fcp = ForceConstantPotential(cs, coefs)
@@ -97,7 +50,7 @@ print(fcp)
 
 ## get the fc2, convert from eV/ang**2 to corresponding units
 fc2 = fcp.get_force_constants(scel).get_fc_array(order=2)
-if os.path.isfile(prefix + ".fc2_lr"):
+if fc2_LR is not None:
     fc2 += fc2_LR
 fc2 = fc2 / fc_factor
 
@@ -116,5 +69,8 @@ phcel.run_thermal_properties(temperatures=300)
 fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
 svib = phcel.get_thermal_properties_dict()['entropy'][0]
 
-print("\nQuality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, np.mean(np.abs(F))*1000))
+print("Mesh shape = ",phcel._mesh._mesh)
+print("Negative frequencies in mesh = %d out of %d" % (np.sum(phcel._mesh.frequencies < 0),phcel._mesh.frequencies.size))
+print("Quality of the fit: r2 = %.7f, adjusted-r2 = %.7f" % (r2, ar2))
+print("Quality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, Favgabs))
 print("Harmonic properties at 300 K (kJ/mol): fvib = %.3f svib = %.3f\n" % (fvib,svib))

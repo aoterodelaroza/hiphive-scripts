@@ -103,7 +103,13 @@ def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
 
     ## initialize file list and matrices
     print("\n## least_squares_batch_simple ##")
-    lfile = glob(outputs)
+    ## build the file lists
+    lfile = []
+    if isinstance(outputs,str):
+        lfile.extend(glob(outputs))
+    else:
+        for i in outputs:
+            lfile.extend(glob(i))
     A = None
     b = None
     Fsum = 0
@@ -113,7 +119,7 @@ def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
 
     # read the forces and build the structure container
     print("# name num-atoms avg-disp avg-force max-force")
-    for fname in glob(outputs):
+    for fname in lfile:
         ## read the structure and fill a structure container with just one strucutre
         sc = StructureContainer(cs)
         atoms = ase.io.read(fname)
@@ -162,7 +168,7 @@ def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
     ssq = 0.
     sstot = 0.
     # read the forces and build the structure container
-    for fname in glob(outputs):
+    for fname in lfile:
         ## read the structure and fill a structure container with just one strucutre
         sc = StructureContainer(cs)
         atoms = ase.io.read(fname)
