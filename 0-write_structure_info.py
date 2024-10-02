@@ -53,6 +53,10 @@ phcel = ph ## save the phonopy cell (problems with primitive cells)
 ph = ph.supercell
 scel = ase.Atoms(symbols=ph.symbols,scaled_positions=ph.scaled_positions,cell=ph.cell*units["distance_to_A"],pbc=[1,1,1])
 
+# cell for clusterspace
+cell_for_cs = ase.Atoms(cell=ph.cell*units["distance_to_A"], symbols=ph.symbols,
+                        scaled_positions=ph.scaled_positions, pbc=True)
+
 ## additional to check if supercell is ok
 ase.io.write('supercell.geometry.in',scel,format=calculator)
 
@@ -76,5 +80,5 @@ print(f'FC unit conversion factor to eV/ang**2: {fc_factor}')
 
 # create the info file
 with open(prefix + ".info","wb") as f:
-    pickle.dump([calculator.lower(), maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor,
-                 phcel],f)
+    pickle.dump([calculator.lower(), maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, cell_for_cs,
+                 scel, fc_factor,phcel],f)

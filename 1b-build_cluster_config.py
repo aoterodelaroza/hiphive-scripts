@@ -12,8 +12,6 @@ import pickle
 from hiphive import ClusterSpace
 import numpy as np
 import ase
-import phonopy
-from phonopy.interface.calculator import get_default_physical_units
 
 ## deactivate deprecation warnings
 import warnings
@@ -22,14 +20,10 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # load the info file
 cutoffs[0] = np.trunc(cutoffs[0]*100)/100 ## truncate to the 2nd decimal place
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel = pickle.load(f)
 
 # build the cluster and save
-units = get_default_physical_units(phcalc)
-ph = phcel.supercell
-cell1 = ase.Atoms(cell=ph.cell*units["distance_to_A"], symbols=ph.symbols,
-                  scaled_positions=ph.scaled_positions, pbc=True)
-cs = ClusterSpace(cell1, cutoffs, acoustic_sum_rules=acoustic_sum_rules)
+cs = ClusterSpace(cell_for_cs, cutoffs, acoustic_sum_rules=acoustic_sum_rules)
 with open(prefix + ".cs","wb") as f:
     pickle.dump([cutoffs,cs],f)
 
