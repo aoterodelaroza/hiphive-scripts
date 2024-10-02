@@ -25,7 +25,7 @@ import os
 import pickle
 import ase.io
 import hiphive as hp
-from hiphive.structure_generation import generate_phonon_rattled_structures
+from hiphive_utilities import generate_phonon_rattled_structures
 
 ## deactivate deprecation warnings
 import warnings
