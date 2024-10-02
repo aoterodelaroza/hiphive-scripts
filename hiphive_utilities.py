@@ -107,7 +107,9 @@ def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
     A = None
     b = None
     Fsum = 0
+    Fsumabs = 0
     Fnum = 0
+    nparam = cs.n_dofs
 
     # read the forces and build the structure container
     print("# name num-atoms avg-disp avg-force max-force")
@@ -118,8 +120,8 @@ def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
 
         ## initialize A and b if not done already
         if A is None or b is None:
-            A = np.zeros((cs.n_dofs, cs.n_dofs))
-            b = np.zeros((cs.n_dofs,))
+            A = np.zeros((nparam, nparam))
+            b = np.zeros((nparam,))
 
         # this is because otherwise the atoms are not in POSCAR order
         displacements = get_displacements(atoms, scel)
@@ -144,8 +146,10 @@ def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
 
         A += M.T.dot(M)
         b += M.T.dot(F)
-        Fsum += np.sum(np.abs(F))
+        Fsumabs += np.sum(np.abs(F))
+        Fsum += np.sum(F)
         Fnum += len(F)
+    Fmean = Fsum / Fnum
 
     ## run the least squares to calculate coefficients
     print("## running least squares")
@@ -155,7 +159,8 @@ def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
 
     ## calculate rmse
     print("## calculating rmse")
-    rmse = 0.
+    ssq = 0.
+    sstot = 0.
     # read the forces and build the structure container
     for fname in glob(outputs):
         ## read the structure and fill a structure container with just one strucutre
@@ -179,12 +184,14 @@ def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
         else:
             M, F = sc.get_fit_data()
 
-        rmse += np.sum((M.dot(coefs) - F)**2)
+        ssq += np.sum((M.dot(coefs) - F)**2)
+        sstot += np.sum((F - Fmean)**2)
     del M,F,sc,atoms,displacements,forces,atoms_tmp
-    rmse = np.sqrt(rmse / Fnum)
-    print()
+    rmse = np.sqrt(ssq / Fnum)
+    r2 = 1 - ssq / sstot
+    ar2 = 1 - (1 - r2) * (Fnum - 1) / (Fnum - nparam - 1)
 
-    return coefs, rmse, Fsum/Fnum*1000
+    return coefs, rmse, Fsumabs/Fnum*1000, r2, ar2
 
 def shuffle_split_cv(M, F, n_splits=5, test_size=0.2, seed=None, verbose=1,
                      standardize=True, last=False, fout=None):
