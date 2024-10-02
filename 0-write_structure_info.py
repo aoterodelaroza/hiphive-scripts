@@ -58,7 +58,7 @@ cell_for_cs = ase.Atoms(cell=ph.cell*units["distance_to_A"], symbols=ph.symbols,
                         scaled_positions=ph.scaled_positions, pbc=True)
 
 ## additional to check if supercell is ok
-ase.io.write('supercell.geometry.in',scel,format=calculator)
+ase.io.write('supercell.geometry.in',scel,format="aims")
 
 # if BORN file exists, read the NAC parameters
 if os.path.isfile("BORN"):
