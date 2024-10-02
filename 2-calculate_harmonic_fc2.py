@@ -97,9 +97,9 @@ print("Mesh shape = ",phcel._mesh._mesh)
 print("Negative frequencies in mesh = %d out of %d" % (np.sum(phcel._mesh.frequencies < 0),phcel._mesh.frequencies.size))
 print("Quality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, np.mean(np.abs(F))*1000))
 print("Harmonic properties at 300 K: Fvib = %.3f kJ/mol, Svib = %.3f J/K/mol" % (fvib,svib))
+print()
 
 ## write negative frequencies file
-if np.sum(phcel._mesh.frequencies < 0) > 0:
+if has_negative_frequencies(phcel._mesh.frequencies):
     filename = prefix + ".fc2_negative_frequencies"
     write_negative_frequencies_file(phcel._mesh,filename)
-print()
