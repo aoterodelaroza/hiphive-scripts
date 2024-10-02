@@ -4,7 +4,11 @@
 This module contains new support/utility functions.
 """
 
+from glob import glob
 import numpy as np
+from hiphive import StructureContainer
+from hiphive.utilities import get_displacements
+import ase
 
 def constant_rattle(atoms, n_structures, amplitude, seed=None):
     """
@@ -91,6 +95,96 @@ def least_squares_simple(M, F):
     rmse = np.sqrt(np.linalg.norm(M.dot(coefs) - F)**2 / len(F))
 
     return coefs, rmse
+
+def least_squares_batch_simple(outputs,cs,scel,fc2_LR=None):
+    """
+    Least squares, in batches
+    """
+
+    ## initialize file list and matrices
+    print("\n## least_squares_batch_simple ##")
+    lfile = glob(outputs)
+    A = None
+    b = None
+    Fsum = 0
+    Fnum = 0
+
+    # read the forces and build the structure container
+    print("# name num-atoms avg-disp avg-force max-force")
+    for fname in glob(outputs):
+        ## read the structure and fill a structure container with just one strucutre
+        sc = StructureContainer(cs)
+        atoms = ase.io.read(fname)
+
+        ## initialize A and b if not done already
+        if A is None or b is None:
+            A = np.zeros((cs.n_dofs, cs.n_dofs))
+            b = np.zeros((cs.n_dofs,))
+
+        # this is because otherwise the atoms are not in POSCAR order
+        displacements = get_displacements(atoms, scel)
+        forces = atoms.get_forces()
+
+        # append to the structure container
+        atoms_tmp = scel.copy()
+        atoms_tmp.new_array('displacements', displacements)
+        atoms_tmp.new_array('forces', forces)
+        sc.add_structure(atoms_tmp)
+
+        print("%s %4d %10.4f %10.4f %10.4f" % (fname,len(sc[0]),\
+              np.mean([np.linalg.norm(d) for d in sc[0].displacements]),np.mean([np.linalg.norm(d) for d in sc[0].forces]),\
+              np.max([np.linalg.norm(d) for d in sc[0].forces])))
+
+        if fc2_LR is not None:
+            displacements = np.array([fs.displacements for fs in sc])
+            M, F = sc.get_fit_data()
+            F -= np.einsum('ijab,njb->nia', -fc2_LR, displacements).flatten()
+        else:
+            M, F = sc.get_fit_data()
+
+        A += M.T.dot(M)
+        b += M.T.dot(F)
+        Fsum += np.sum(np.abs(F))
+        Fnum += len(F)
+
+    ## run the least squares to calculate coefficients
+    print("## running least squares")
+    del M,F,sc,atoms,displacements,forces,atoms_tmp
+    coefs = np.linalg.solve(A.T.dot(A),A.T.dot(b))
+    del A,b
+
+    ## calculate rmse
+    print("## calculating rmse")
+    rmse = 0.
+    # read the forces and build the structure container
+    for fname in glob(outputs):
+        ## read the structure and fill a structure container with just one strucutre
+        sc = StructureContainer(cs)
+        atoms = ase.io.read(fname)
+
+        # this is because otherwise the atoms are not in POSCAR order
+        displacements = get_displacements(atoms, scel)
+        forces = atoms.get_forces()
+
+        # append to the structure container
+        atoms_tmp = scel.copy()
+        atoms_tmp.new_array('displacements', displacements)
+        atoms_tmp.new_array('forces', forces)
+        sc.add_structure(atoms_tmp)
+
+        if fc2_LR is not None:
+            displacements = np.array([fs.displacements for fs in sc])
+            M, F = sc.get_fit_data()
+            F -= np.einsum('ijab,njb->nia', -fc2_LR, displacements).flatten()
+        else:
+            M, F = sc.get_fit_data()
+
+        rmse += np.sum((M.dot(coefs) - F)**2)
+    del M,F,sc,atoms,displacements,forces,atoms_tmp
+    rmse = np.sqrt(rmse / Fnum)
+    print()
+
+    return coefs, rmse, Fsum/Fnum*1000
 
 def shuffle_split_cv(M, F, n_splits=5, test_size=0.2, seed=None, verbose=1,
                      standardize=True, last=False, fout=None):
@@ -365,4 +459,3 @@ def generate_phonon_rattled_structures(atoms, fc2, n_structures, temperature,
         pr(atoms_tmp, temperature, QM_statistics)
         structures.append(atoms_tmp)
     return structures
-
