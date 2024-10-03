@@ -10,10 +10,8 @@
 import numpy as np
 
 ## input block ##
-prefix="blah" ## prefix for the generated files
+prefix="mgo" ## prefix for the generated files
 n_structures = 10 # number of structures used in scph
-validation_nsplit=0 # number of splits in validation (set to 0 for plain least-squares)
-train_fraction=0.8 # fraction of data used in training/validation split
 temperatures = np.arange(100, 2700, 100) # temperature list (0 is always included) eg: np.arange(440, 0, -10)
 write_fc2eff = False # write the second-order effective force constants file (prefix-temp.fc2_eff)
 #################
@@ -33,8 +31,9 @@ from hiphive import ForceConstants
 from hiphive.calculators import ForceConstantCalculator
 from hiphive.force_constant_model import ForceConstantModel
 from hiphive.utilities import prepare_structures
-from hiphive_utilities import constant_rattle, shuffle_split_cv, least_squares_simple,\
-    write_negative_frequencies_file, generate_phonon_rattled_structures, has_negative_frequencies
+from hiphive_utilities import constant_rattle, shuffle_split_cv,\
+    write_negative_frequencies_file, generate_phonon_rattled_structures, has_negative_frequencies,\
+    least_squares_batch_simple
 
 ## deactivate deprecation warnings
 import warnings
@@ -94,11 +93,10 @@ fcm = ForceConstantModel(scel, cs)
 rattled_structures = constant_rattle(scel, n_structures, 0.15, rs)
 rattled_structures = prepare_structures(rattled_structures, scel, calc, check_permutation=False)
 
-for structure in rattled_structures:
-    sc.add_structure(structure)
-M, F = sc.get_fit_data()
-coefs, rmse = least_squares_simple(M, F, verbose=0)
-
+# calculate the first least squares for the initial parameters
+for s in rattled_structures:
+    sc.add_structure(s)
+coefs, _, _, _, _ = least_squares_batch_simple(sc,cs,scel,skiprmse=1)
 sc.delete_all_structures()
 
 # run poor man's self consistent phonon frequencies
@@ -116,22 +114,14 @@ for t in temperatures:
             fc2 += fc2_LR
 
         # generate phonon rattled structures with the current fc2
-        phonon_rattled_structures = generate_phonon_rattled_structures(scel,fc2,n_structures,t)
+        rattled_structures = generate_phonon_rattled_structures(scel,fc2,n_structures,t)
 
         # calculate forces at the generated structures
-        phonon_rattled_structures = prepare_structures(phonon_rattled_structures, scel, calc)
+        rattled_structures = prepare_structures(rattled_structures, scel, calc)
 
-        # build the new structure container
-        for structure in phonon_rattled_structures:
-            sc.add_structure(structure)
-
-        # fit the new harmonic model
-        M, F = sc.get_fit_data()
-        if (validation_nsplit == 0):
-            coefs, rmse = least_squares_simple(M, F, verbose=0)
-        else:
-            _, coefs, rmse = shuffle_split_cv(M, F, n_splits=validation_nsplit,
-                                              test_size=(1 -train_fraction),seed=rs,verbose=0)
+        for s in rattled_structures:
+            sc.add_structure(s)
+        coefs, _, _, _, _ = least_squares_batch_simple(sc,cs,scel,skiprmse=1)
         sc.delete_all_structures()
 
         # mix the new FC2 with the previous one
@@ -167,7 +157,7 @@ for t in temperatures:
         param_old = param_new
 
         # print iteration summary
-        disps = [atoms.get_array('displacements') for atoms in phonon_rattled_structures]
+        disps = [atoms.get_array('displacements') for atoms in rattled_structures]
         disp_ave = np.mean(np.abs(disps))
         disp_max = np.max(np.abs(disps))
         print(f'{it}: {negstr} x_new = {x_new_norm:.3e},',
