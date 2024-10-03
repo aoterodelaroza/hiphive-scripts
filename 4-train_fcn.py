@@ -6,7 +6,7 @@
 
 ## input block ##
 prefix="mgo" ## prefix for the generated files
-outputs=["mgo-0500*/*.out"] # regular expression for the files ()
+outputs=["mgo-*/*.out"] # regular expression for the files ()
 #################
 
 import os
@@ -17,7 +17,7 @@ import ase
 import time
 from hiphive import StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
-from hiphive_utilities import shuffle_split_cv, least_squares_batch, least_squares_accum
+from hiphive_utilities import least_squares_batch, least_squares_accum
 
 ## deactivate deprecation warnings
 import warnings
@@ -38,8 +38,8 @@ if os.path.isfile(prefix + ".fc2_lr"):
         fc2_LR = pickle.load(f) * fc_factor
 
 ## run least squares
-if use_batch_lsqr:
-    coefs, rmse, Favgabs, r2, ar2 = least_squares_batch(outputs,cs,scel,fc2_LR)
+if nthread_batch_lsqr and nthread_batch_lsqr > 0:
+    coefs, rmse, Favgabs, r2, ar2 = least_squares_batch(outputs,nthread_batch_lsqr,cs,scel,fc2_LR)
 else:
     coefs, rmse, Favgabs, r2, ar2 = least_squares_accum(outputs,cs,scel,fc2_LR)
 

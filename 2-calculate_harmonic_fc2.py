@@ -8,7 +8,7 @@
 
 ## input block ##
 prefix="mgo" ## prefix for the generated files
-outputs="mgo-*/*.out" ## regular expression for the files (QE,aims=*.out,VASP=*.xml)
+outputs="harmonic-*/*.out" ## regular expression for the files (QE,aims=*.out,VASP=*.xml)
 #################
 
 import pickle

@@ -5,7 +5,7 @@
 
 ## input block ##
 prefix="mgo" ## prefix for the generated files
-cutoffs = [6.3,4.5,4.0] #
+cutoffs = [6.3,4.5,4.0] # cutoffs for [2nd,3rd,...] order in angstrom
 #################
 
 import pickle

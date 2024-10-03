@@ -4,7 +4,7 @@
 ## Output: a number of input structures in prefix*/
 
 ## input block ##
-prefix="blah" ## prefix for the generated files
+prefix="mgo" ## prefix for the generated files
 fc2_phonopy = None ## if given, read the FC2s from phonopy (FORCE_CONSTANTS file)
 rattle = [(500, 20)] ## rattle type: list of (T,nstruct)
 out_kwargs = {
@@ -13,10 +13,9 @@ out_kwargs = {
     'tprnfor': True,
     'ecutwfc': 80.0,
     'ecutrho': 800.0,
-    'calculation': 'scf',
     'conv_thr': 1e-10,
-    'pseudopotentials': {'Sr': 'sr.UPF', 'Ti': 'ti.UPF', 'O': 'o.UPF'},
-    'kpts': (3, 3, 3),
+    'pseudopotentials': {'O': 'o.UPF', 'Mg': 'mg.UPF'},
+    'kpts': (2,2,2),
 } ## pass this down to ASE (example for QE)
 ## out_kwargs = {} ## pass this down to ASE (example for VASP,FHIaims)
 #################
