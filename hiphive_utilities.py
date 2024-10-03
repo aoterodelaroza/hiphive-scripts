@@ -10,9 +10,10 @@ import ase, ase.units
 
 def constant_rattle(atoms, n_structures, amplitude, seed=None):
     """
-    Generate n_structures based on the initial structure atoms by rattling
-    the atomic positions randomly with displacements given by amplitude.
-    If seed is RandomState, use the random generator, otherwise initialize.
+    Generate n_structures strucures based on the initial structure
+    atoms by rattling the atomic positions randomly with displacements
+    given by amplitude.  If seed is RandomState, use the random
+    generator, otherwise initialize.
     """
     if seed is None:
         import time
@@ -37,56 +38,12 @@ def constant_rattle(atoms, n_structures, amplitude, seed=None):
 
     return atoms_list
 
-def least_squares(M, F, n_jobs=-1, verbose=1, standardize=True, mean=False,
-                  std=True, fout=None):
-    """
-    Old version of least_squares = TO BE REMOVED.
-
-    StandardScaler:
-        s = (x -u)/s , u = mean(x), s = std(x)
-    Return the model and the parameters
-    """
-    from sklearn.linear_model import LinearRegression
-    from sklearn.metrics import mean_absolute_error, mean_squared_error, max_error
-    import time
-    #M, F = sc.get_fit_data()
-    opt = LinearRegression(n_jobs=n_jobs)
-    if standardize:
-        from sklearn.preprocessing import StandardScaler
-        s = StandardScaler(copy=False, with_mean=mean, with_std=std)
-        s.fit_transform(M)
-        factor = 1.0 / np.std(F)
-        F = F * factor
-        a = time.time()
-        opt.fit(M, F)
-        s.inverse_transform(M)
-        parameters = opt.coef_ / factor
-        s.transform(parameters.reshape(1, -1)).reshape(-1,) ## restore par.
-        opt.coef_ = parameters
-        #original F
-        F = F / factor
-    else:
-        opt.fit(M, F)
-        factor = 1
-
-    y_pred = opt.predict(M)
-    rmse = np.sqrt(mean_squared_error(F, y_pred))
-    if verbose > 0:
-        print(f"""====================================================
-Parameters: {opt.n_features_in_}
-Non-zero parameters (>1e-3): {len(np.where(np.abs(opt.coef_) > 1e-3)[0])}
-R2: {opt.score(M, F):0.8f}
-Mean Absolute Error: {mean_absolute_error(F, y_pred):0.8f}
-Mean Squared Error: {mean_squared_error(F, y_pred):0.8f}
-Max Error: {max_error(F, y_pred):0.8f}
-====================================================
-              """, file=fout)
-    return opt, opt.coef_, rmse
-
 def least_squares(M, F, skiprmse=None):
     """
-    Run a simple and efficient version of least squares and return the
-    least-squares parameters and the root mean square error.
+    Run least squares with matrices M and F and returns the
+    least-squares coefficients. If skiprmse is None,
+    also return the root mean square error, the average absolute F,
+    the r2 coefficient and the adjusted r2.
     """
 
     coefs = np.linalg.solve(M.T.dot(M),M.T.dot(F))
@@ -101,14 +58,25 @@ def least_squares(M, F, skiprmse=None):
     rmse = np.sqrt(ssq / Fnum)
     r2 = 1 - ssq / sstot
     ar2 = 1 - (1 - r2) * (Fnum - 1) / (Fnum - nparam - 1)
-    Fabsavg = np.sum(np.abs(F)) / Fnum * 1000
+    Fabsavg = np.sum(np.abs(F)) / Fnum
 
     return coefs, rmse, Fabsavg, r2, ar2
 
 def least_squares_batch(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
     """
-    Least squares, in batches.
-    structs can be a string w regexp, a list of strings w regexps, ase atoms, structurecontainer
+    Run least squares in batches to preserve memory using the M and F
+    values from the structures in structs. structs can be:
+
+    - A string/regexp or a list of strings/regexps. Requires giving
+    the clusterspace (cs) and supercell structure (scel).
+
+    - An ASE Atoms object or a list of Atoms objects. Requires the
+    clusterspace (cs).
+
+    - A structure container. In this case, the effect is the same as
+    least_squares_accum.
+
+    This version takes longer than least_squares_accum but uses less memory.
     """
 
     ## special case: structs is a structure container => use simple least squares w all data
@@ -235,14 +203,26 @@ def least_squares_batch(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
         rmse = 0.
         r2 = 0.
         ar2 = 0.
-    Fabsavg = Fsumabs/Fnum*1000
+    Fabsavg = Fsumabs/Fnum
 
     return coefs, rmse, Fabsavg, r2, ar2
 
 def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
     """
-    Least squares, accumulating in a single structurecontainer.
-    structs can be a string w regexp, a list of strings w regexps, ase atoms, structurecontainer
+    Run least squares using the M and F values from the structures in
+    structs. structs can be:
+
+    - A string/regexp or a list of strings/regexps. Requires giving
+    the clusterspace (cs) and supercell structure (scel).
+
+    - An ASE Atoms object or a list of Atoms objects. Requires the
+    clusterspace (cs).
+
+    - A structure container. In this case, the effect is the same as
+    least_squares_accum.
+
+    This version is faster than least_squares_accum but loads the
+    whole M into memory.
     """
 
     ## build the structure container
@@ -289,98 +269,6 @@ def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
     else:
         M, F = sc.get_fit_data()
     return least_squares(M,F,skiprmse)
-
-def shuffle_split_cv(M, F, n_splits=5, test_size=0.2, seed=None, verbose=1,
-                     standardize=True, last=False, fout=None):
-    """
-    Shuffle-splict cross validation using least squares = TO BE REMOVED.
-
-    Standard ShuffleSplit cross validation
-    KFold is not available for our case as in trainstation
-    method only available least-squares add if if more fitting methods are add
-    """
-    from sklearn.model_selection import ShuffleSplit
-    from sklearn.metrics import mean_absolute_error, mean_squared_error, max_error
-    if seed is None:
-        import time
-        seed = int(time.time())
-    if type(seed) is np.random.RandomState:
-        rs = seed
-    else:
-        rs = np.random.RandomState(seed)
-
-    sp = ShuffleSplit(n_splits=n_splits, test_size=test_size,
-                      train_size=1-test_size, random_state=rs)
-    parameters = []
-    scores = []
-    maes = []
-    rmses = []
-    maxs = []
-    for index, (train, test) in enumerate(sp.split(M)):
-        #opt.fit(M[train], F[train])
-        opt, parameter, _ = least_squares(M[train], F[train], standardize=standardize,
-                                          verbose=0)
-        y_train = opt.predict(M[train])
-        y_test = opt.predict(M[test])
-        scores.append([opt.score(M[train], F[train]), opt.score(M[test],
-                                                                F[test])])
-        maes.append([mean_absolute_error(F[train], y_train),
-                     mean_absolute_error(F[test], y_test)])
-
-        rmses.append([mean_squared_error(F[train], y_train),
-                      mean_squared_error(F[test], y_test)])
-        maxs.append([max_error(F[train], y_train), max_error(F[test], y_test)])
-        parameters.append(parameter)
-    if last:
-        ## uses final split parameters for final
-        opt.coef_ = parameter
-    else:
-        ## mean value of all the splits
-        opt.coef_ = np.mean(parameters, axis=0)
-    if verbose > 1:
-        print_cv_steps(n_splits, scores, maes, rmses, maxs)
-
-    y_pred = opt.predict(M)
-    if verbose > 0:
-        print(f"""====================================================
-Parameters: {opt.n_features_in_}
-Non-zero parameters (>1e-3): {len(np.where(np.abs(opt.coef_) > 1e-3)[0])}
-TRAINING SET:
-R2 train: {np.mean(np.array(scores),axis=0)[0]:0.8f}
-Mean Absolute Error train: {np.mean(np.array(maes),axis=0)[0]:0.8f}
-Mean Squared Error train: {np.mean(np.array(rmses),axis=0)[0]:0.8f}
-Max Error train: {np.mean(np.array(maxs),axis=0)[0]:0.8f}
-TEST SET:
-R2 test: {np.mean(np.array(scores),axis=0)[1]:0.8f}
-Mean Absolute Error test: {np.mean(np.array(maes),axis=0)[1]:0.8f}
-Mean Squared Error test: {np.mean(np.array(rmses),axis=0)[1]:0.8f}
-Max Error test: {np.mean(np.array(maxs),axis=0)[1]:0.8f}
-FINAL MODEL:
-R2 final: {opt.score(M, F):0.8f}
-Mean Absolute Error final: {mean_absolute_error(F, y_pred):0.8f}
-Mean Squared Error final: {mean_squared_error(F, y_pred):0.8f}
-Max Error final: {max_error(F, y_pred):0.8f}
-====================================================
-                  """, file=fout)
-    return opt, opt.coef_, np.sqrt(mean_squared_error(F, y_pred))
-
-def print_cv_steps(splits, scores, maes, rmses, maxs, fout=None):
-    """
-    Just to print the cross validation metrics of each step
-    TO BE REMOVED.
-    """
-    for i, score, mae, rmse, max in zip(range(splits), scores, maes, rmses, maxs):
-        print(f"""============================
-Fold: {i+1}
-R2 train: {score[0]:0.8f}
-R2 test: {score[1]:0.8f}
-MAE train: {mae[0]:0.8f}
-MAE test: {mae[1]:0.8f}
-RMSE train: {rmse[0]:0.8f}
-RMSE test: {rmse[1]:0.8f}
-Max Error train: {max[0]:0.8f}
-Max Error test: {max[1]:0.8f}
-============================""", file=fout)
 
 def has_negative_frequencies(freqs,threshold=10):
     """

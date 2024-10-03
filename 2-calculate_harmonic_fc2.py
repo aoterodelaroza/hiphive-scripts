@@ -73,7 +73,7 @@ svib = phcel.get_thermal_properties_dict()['entropy'][0]
 print("Mesh shape = ",phcel._mesh._mesh)
 print("Negative frequencies in mesh = %d out of %d" % (np.sum(phcel._mesh.frequencies < 0),phcel._mesh.frequencies.size))
 print("Quality of the fit: r2 = %.7f, adjusted-r2 = %.7f" % (r2, ar2))
-print("Quality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, Favgabs))
+print("Quality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, Favgabs*1000))
 print("Harmonic properties at 300 K: Fvib = %.3f kJ/mol, Svib = %.3f J/K/mol" % (fvib,svib))
 
 ## write negative frequencies file
