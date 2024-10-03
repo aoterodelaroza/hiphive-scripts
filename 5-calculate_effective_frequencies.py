@@ -31,7 +31,7 @@ from hiphive import ForceConstants
 from hiphive.calculators import ForceConstantCalculator
 from hiphive.force_constant_model import ForceConstantModel
 from hiphive.utilities import prepare_structures
-from hiphive_utilities import constant_rattle, shuffle_split_cv,\
+from hiphive_utilities import constant_rattle, \
     write_negative_frequencies_file, generate_phonon_rattled_structures, has_negative_frequencies,\
     least_squares_batch, least_squares_accum
 
