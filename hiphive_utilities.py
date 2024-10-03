@@ -80,8 +80,11 @@ def thread_task(fname):
     """
     global scel, cs, fc2_LR, coefs, Fmean
 
-    # read structure
-    atoms = ase.io.read(fname)
+    # read structure (string or ASE Atoms object)
+    if (isinstance(fname,str)):
+        atoms = ase.io.read(fname)
+    else:
+        atoms = fname
 
     # this is because otherwise the atoms are not in POSCAR order
     displacements = get_displacements(atoms, scel)
@@ -103,7 +106,6 @@ def thread_task(fname):
         F -= np.einsum('ijab,njb->nia', -fc2_LR, displacements).flatten()
     else:
         M, F = sc.get_fit_data()
-
 
     if coefs is None:
         ### generate the A and b contributions (first pass)
@@ -167,7 +169,7 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
     ## initialize
     Fsum = 0.
     Fsumabs = 0.
-    Fnum = 0.
+    Fnum = 0
     nparam = cs.n_dofs
     A = np.zeros((nparam, nparam))
     b = np.zeros((nparam,))
@@ -182,6 +184,8 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
         Fsumabs += result[2]
         Fsum += result[3]
         Fnum += result[4]
+    if Fnum == 0:
+        raise Exception("No structures found")
     Fmean = Fsum / Fnum
 
     ## run the least squares to calculate coefficients
