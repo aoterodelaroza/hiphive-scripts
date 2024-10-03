@@ -12,7 +12,7 @@ import numpy as np
 ## input block ##
 prefix="mgo" ## prefix for the generated files
 n_structures = 10 # number of structures used in scph
-temperatures = np.arange(100, 2700, 100) # temperature list (0 is always included) eg: np.arange(440, 0, -10)
+temperatures = np.arange(100,2700,100) # temperature list (0 is always included) eg: np.arange(440, 0, -10)
 write_fc2eff = False # write the second-order effective force constants file (prefix-temp.fc2_eff)
 #################
 
@@ -20,6 +20,7 @@ write_fc2eff = False # write the second-order effective force constants file (pr
 alpha = 0.1 # damping factor for the parameters in the scph iterations
 n_max = 35 # max number of steps in scph
 n_last = 10 # n_last steps are used for fvib, svib, etc. averages
+conv_thr = 0.02 # If mean(abs(s[-n_last:] - s[-1])) < conv_thr, stop the iterations [J/K/mol]
 #################
 
 import os
@@ -31,7 +32,7 @@ from hiphive import ForceConstants
 from hiphive.calculators import ForceConstantCalculator
 from hiphive.force_constant_model import ForceConstantModel
 from hiphive.utilities import prepare_structures
-from hiphive_utilities import constant_rattle, \
+from hiphive_utilities import constant_rattle,\
     write_negative_frequencies_file, generate_phonon_rattled_structures, has_negative_frequencies,\
     least_squares_batch, least_squares_accum
 
@@ -136,9 +137,6 @@ for t in temperatures:
         # check if negative frequencies are present; if so, write negative frequencies file
         has_neg = has_negative_frequencies(phcel._mesh.frequencies)
         if has_neg:
-            tint = int(round(t))
-            filename = f'{prefix}-{tint:04d}.fc2_negative_frequencies'
-            write_negative_frequencies_file(phcel._mesh,filename)
             negstr = "(NEG)"
         else:
             negstr = "     "
@@ -151,6 +149,11 @@ for t in temperatures:
         flist.append(fvib)
         slist.append(svib)
 
+        if has_neg:
+            tint = int(round(t))
+            filename = f'{prefix}-{tint:04d}.fc2_negative_frequencies'
+            write_negative_frequencies_file(phcel._mesh,filename)
+
         # update the model
         param_old = param_new
 
@@ -162,6 +165,14 @@ for t in temperatures:
               f'delta_x = {delta_x_norm:.3e},',
               f'disp_ave = {disp_ave:.5f}, fvib = {fvib:.3f},',
               f'svib = {svib:.3f}')
+
+        if (len(slist) > n_last-1):
+            mae = np.mean(np.abs(slist[-n_last:]-slist[-1]))
+            if (mae < conv_thr):
+                print("CONVERGED mean(abs(s[-n_last:] - s[-1])) = %.5f < conv_thr = %.5f" % (mae,conv_thr))
+                break
+            else:
+                print("mean(abs(s[-n_last:] - s[-1])) = %.5f >= conv_thr = %.5f" % (mae,conv_thr))
         sys.stdout.flush()
 
     # calculate average properties and output
