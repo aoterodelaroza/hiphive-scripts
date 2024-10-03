@@ -17,7 +17,7 @@ import ase
 import time
 from hiphive import StructureContainer, ForceConstantPotential
 from hiphive.utilities import get_displacements
-from hiphive_utilities import least_squares_batch, least_squares_accum
+from hiphive_utilities import shuffle_split_cv, least_squares_batch, least_squares_accum
 
 ## deactivate deprecation warnings
 import warnings

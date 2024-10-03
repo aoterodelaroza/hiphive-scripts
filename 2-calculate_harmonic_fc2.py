@@ -8,7 +8,7 @@
 
 ## input block ##
 prefix="mgo" ## prefix for the generated files
-outputs="mgo-01*/*.out" ## regular expression for the files (QE,aims=*.out,VASP=*.xml)
+outputs="mgo-*/*.out" ## regular expression for the files (QE,aims=*.out,VASP=*.xml)
 #################
 
 import pickle
@@ -24,7 +24,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, acoustic_sum_rules, use_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel = pickle.load(f)
 
 # build cluster space with only fc2
 cutoffs = [maximum_cutoff]
@@ -37,8 +37,8 @@ if os.path.isfile(prefix + ".fc2_lr"):
         fc2_LR = pickle.load(f) * fc_factor
 
 ## run least squares
-if use_batch_lsqr:
-    coefs, rmse, Favgabs, r2, ar2 = least_squares_batch(outputs,cs,scel,fc2_LR)
+if nthread_batch_lsqr and nthread_batch_lsqr > 0:
+    coefs, rmse, Favgabs, r2, ar2 = least_squares_batch(outputs,nthread_batch_lsqr,cs,scel,fc2_LR)
 else:
     coefs, rmse, Favgabs, r2, ar2 = least_squares_accum(outputs,cs,scel,fc2_LR)
 

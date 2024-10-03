@@ -14,7 +14,7 @@ ncell = [3,0,0, 0,3,0, 0,0,3] ## nice supercell
 calculator = "espresso-in" ## program used for the calculations, case insensitive (vasp,espresso-in,aims)
 maximum_cutoff = 6.3 ## maximum cutoff for this crystal (angstrom, NEWCELL NICE 1 on supercell)
 acoustic_sum_rules = False # whether to use acoustic sum rules (fewer parameters, much slower)
-use_batch_lsqr = False # use batch least squares (less memory, more CPU)
+nthread_batch_lsqr = 10 # if > 0, use batch least squares (less memory, more CPU) with these many threads
 #################
 
 import os
@@ -81,5 +81,5 @@ print(f'FC unit conversion factor to eV/ang**2: {fc_factor}')
 
 # create the info file
 with open(prefix + ".info","wb") as f:
-    pickle.dump([calculator.lower(), maximum_cutoff, acoustic_sum_rules, use_batch_lsqr, phcalc,
+    pickle.dump([calculator.lower(), maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc,
                  ncell, cell, cell_for_cs, scel, fc_factor,phcel],f)
