@@ -8,6 +8,10 @@ from hiphive import StructureContainer
 from hiphive.utilities import get_displacements
 import ase, ase.units
 import multiprocessing as mp
+import sys
+
+## dictionary for least_squares_batch global variables
+batch_dict = {}
 
 def constant_rattle(atoms, n_structures, amplitude, seed=None):
     """
@@ -63,22 +67,33 @@ def least_squares(M, F, skiprmse=None):
 
     return coefs, rmse, Fabsavg, r2, ar2
 
-def thread_init(scel_,cs_,fc2_LR_,coefs_,Fmean_):
+def thread_init(scel,cs,nparam,A,b,fc2_LR,coefs,Fmean):
     """
-    Helper routine for thread initialization in least_squares_batch
+    Helper routine for thread initialization in least_squares_batch.
+    Save variables to the global dictionary.
     """
-    global scel, cs, fc2_LR, coefs, Fmean
-    scel = scel_
-    cs = cs_
-    fc2_LR = fc2_LR_
-    coefs = coefs_
-    Fmean = Fmean_
+    batch_dict['nparam'] = nparam
+    batch_dict['A'] = A
+    batch_dict['b'] = b
+    batch_dict['scel'] = scel
+    batch_dict['cs'] = cs
+    batch_dict['fc2_LR'] = fc2_LR
+    batch_dict['coefs'] = coefs
+    batch_dict['Fmean'] = Fmean
 
 def thread_task(fname):
     """
-    Helper routine for thread work in least_squares_batch
+    Helper routine for thread work in least_squares_batch. fname is either an
+    output file or an Atoms object.
     """
-    global scel, cs, fc2_LR, coefs, Fmean
+    nparam = batch_dict['nparam']
+    A = batch_dict['A']
+    b = batch_dict['b']
+    scel = batch_dict['scel']
+    cs = batch_dict['cs']
+    fc2_LR = batch_dict['fc2_LR']
+    coefs = batch_dict['coefs']
+    Fmean = batch_dict['Fmean']
 
     # read structure (string or ASE Atoms object)
     if (isinstance(fname,str)):
@@ -107,22 +122,37 @@ def thread_task(fname):
     else:
         M, F = sc.get_fit_data()
 
-    if coefs is None:
-        ### generate the A and b contributions (first pass)
+    # print message and clear structurecontainer
+    print("[%d] %s %4d %10.4f %10.4f %10.4f" % (mp.current_process().pid,fname,len(sc[0]),
+                                                np.mean([np.linalg.norm(d) for d in sc[0].displacements]),
+                                                np.mean([np.linalg.norm(d) for d in sc[0].forces]),
+                                                np.max([np.linalg.norm(d) for d in sc[0].forces])),flush=True)
+    del sc
+
+    if A is not None and b is not None:
+        ### generate the A and b contributions (first pass) ###
+
+        # calculate the contribution from M and F, clean up M
         Asum = M.T.dot(M)
         bsum = M.T.dot(F)
+        del M
 
-        # print message
-        print("[%d] %s %4d %10.4f %10.4f %10.4f" % (mp.current_process().pid,fname,len(sc[0]),
-                                                    np.mean([np.linalg.norm(d) for d in sc[0].displacements]),
-                                                    np.mean([np.linalg.norm(d) for d in sc[0].forces]),
-                                                    np.max([np.linalg.norm(d) for d in sc[0].forces])))
+        # get the global arrays as numpy arrays
+        A_np = np.frombuffer(A.get_obj()).reshape((nparam,nparam))
+        b_np = np.frombuffer(b.get_obj()).reshape((nparam,))
 
-        return Asum, bsum, np.sum(np.abs(F)), np.sum(F), len(F)
+        # accumulate and clean up the A and b contributions
+        A_np += Asum
+        b_np += bsum
+        del Asum, bsum
+
+        # return Asum, bsum, np.sum(np.abs(F)), np.sum(F), len(F)
+        return np.sum(np.abs(F)), np.sum(F), len(F)
     else:
-        ### calculate ssq and sstot (second pass)
+        ### calculate ssq and sstot (second pass) ###
         ssq = np.sum((M.dot(coefs) - F)**2)
         sstot = np.sum((F - Fmean)**2)
+
         return ssq, sstot
 
 def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=None):
@@ -171,39 +201,49 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
     Fsumabs = 0.
     Fnum = 0
     nparam = cs.n_dofs
-    A = np.zeros((nparam, nparam))
-    b = np.zeros((nparam,))
+
+    ## create multiprocessing array with locking, associate numpy arrays
+    A = mp.Array('d',nparam * nparam)
+    A_np = np.frombuffer(A.get_obj()).reshape((nparam,nparam))
+    b = mp.Array('d',nparam)
+    b_np = np.frombuffer(b.get_obj()).reshape((nparam,))
+    A_np.fill(0.)
+    b_np.fill(0.)
+
+    # header message
+    print("## calculating A,b matrices (parallel with %d threads)" % (nthread))
+    print("#[pid] structure-name num-atoms avg-disp avg-force max-force")
 
     ## calculate the least-squares matrices (and other data) in parallelized batches
-    print("## calculating A,b matrices (parallel)")
-    print("#[pid] structure-name num-atoms avg-disp avg-force max-force")
-    pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,fc2_LR,None,None))
+    pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,nparam,A,b,fc2_LR,None,None))
     for result in pool.imap_unordered(thread_task,lfile):
-        A += result[0]
-        b += result[1]
-        Fsumabs += result[2]
-        Fsum += result[3]
-        Fnum += result[4]
+        Fsumabs += result[0]
+        Fsum += result[1]
+        Fnum += result[2]
+    pool.close()
+    pool.join()
     if Fnum == 0:
         raise Exception("No structures found")
     Fmean = Fsum / Fnum
 
-    ## run the least squares to calculate coefficients
+    ## run the least squares to calculate coefficients, clean up afterwards
     print("## running least squares")
-    coefs = np.linalg.solve(A.T.dot(A),A.T.dot(b))
-    del A,b
+    coefs = np.linalg.solve(A_np.T.dot(A_np),A_np.T.dot(b_np))
+    del A, b, A_np, b_np
 
     if skiprmse is None:
         ## header and initialize
-        print("## calculating rmse (parallel)")
+        print("## calculating rmse (parallel with %d threads)" % (nthread))
         ssq = 0.
         sstot = 0.
 
         ## calculate the rmse in parallel
-        pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,fc2_LR,coefs,Fmean))
+        pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,nparam,None,None,fc2_LR,coefs,Fmean))
         for result in pool.imap_unordered(thread_task,lfile):
             ssq += result[0]
             sstot += result[1]
+        pool.close()
+        pool.join()
 
         ## calculate rmse, r2, adjusted r2
         rmse = np.sqrt(ssq / Fnum)

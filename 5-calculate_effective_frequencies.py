@@ -172,8 +172,8 @@ for t in temperatures:
                 print("CONVERGED mean(abs(s[-n_last:] - s[-1])) = %.5f < conv_thr = %.5f" % (mae,conv_thr))
                 break
             else:
-                print("mean(abs(s[-n_last:] - s[-1])) = %.5f >= conv_thr = %.5f" % (mae,conv_thr))
-        sys.stdout.flush()
+                print("mean(abs(s[-n_last:] - s[-1])) = %.5f >= conv_thr = %.5f" % (mae,conv_thr),flush=True)
+
 
     # calculate average properties and output
     fvib = np.mean(flist[len(flist)-n_last:len(flist)])
