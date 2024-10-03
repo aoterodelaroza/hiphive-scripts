@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # load the info file
 cutoffs[0] = np.trunc(cutoffs[0]*100)/100 ## truncate to the 2nd decimal place
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, acoustic_sum_rules, use_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel = pickle.load(f)
 
 # build the cluster and save
 cs = ClusterSpace(cell_for_cs, cutoffs, acoustic_sum_rules=acoustic_sum_rules)
