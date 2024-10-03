@@ -36,7 +36,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # read the info file
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, acoustic_sum_rules, use_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel = pickle.load(f)
 units = get_default_physical_units(phcalc)
 
 # initialize random seed

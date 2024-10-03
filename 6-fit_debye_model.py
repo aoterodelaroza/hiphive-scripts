@@ -7,7 +7,7 @@
 import numpy as np
 
 ## input block ##
-prefix="blah" ## prefix for the generated files
+prefix="mgo" ## prefix for the generated files
 temperatures = np.arange(0, 3010, 10) # extended temperature list
 npoly=3 # number of parameters in the polynomial part of extended Debye
 #################
@@ -111,7 +111,7 @@ def cvdebye_ext(t,pin):
   return cv
 
 ## read the svib file
-xx = np.loadtxt(prefix + ".svib")
+xx = np.loadtxt(prefix + ".svib",usecols=(0,1,2,3,4))
 f0 = xx[0,1] * z / 4.184 / 627.50947 ## zero-point energy in Ha
 t = xx[1:,0] ## temperature in K (skip 0 K)
 s = xx[1:,3] * z / 1000 / 4.184 / 627.50947 ## entropy in Ha/K (skip 0 K)

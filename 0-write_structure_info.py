@@ -8,12 +8,12 @@
 ## --> optional: prefix.fc2_LR
 
 ## input block ##
-prefix="blah" ## prefix for the generated files
-eq_structure="blah.scf.in" ## the equilibrium structure
+prefix="mgo" ## prefix for the generated files
+eq_structure="mgo.scf.in" ## the equilibrium structure
 ncell = [3,0,0, 0,3,0, 0,0,3] ## nice supercell
 calculator = "espresso-in" ## program used for the calculations, case insensitive (vasp,espresso-in,aims)
-maximum_cutoff = 6.384 ## maximum cutoff for this crystal (angstrom, NEWCELL NICE 1 on supercell)
-acoustic_sum_rules = True # whether to use acoustic sum rules (fewer parameters, much slower)
+maximum_cutoff = 6.3 ## maximum cutoff for this crystal (angstrom, NEWCELL NICE 1 on supercell)
+acoustic_sum_rules = False # whether to use acoustic sum rules (fewer parameters, much slower)
 use_batch_lsqr = False # use batch least squares (less memory, more CPU)
 #################
 

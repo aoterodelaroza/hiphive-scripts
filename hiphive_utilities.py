@@ -83,7 +83,7 @@ Max Error: {max_error(F, y_pred):0.8f}
               """, file=fout)
     return opt, opt.coef_, rmse
 
-def least_squares_simple(M, F, skiprmse=None):
+def least_squares(M, F, skiprmse=None):
     """
     Run a simple and efficient version of least squares and return the
     least-squares parameters and the root mean square error.
@@ -105,7 +105,7 @@ def least_squares_simple(M, F, skiprmse=None):
 
     return coefs, rmse, Fabsavg, r2, ar2
 
-def least_squares_batch_simple(structs,cs,scel,fc2_LR=None,skiprmse=None):
+def least_squares_batch(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
     """
     Least squares, in batches.
     structs can be a string w regexp, a list of strings w regexps, ase atoms, structurecontainer
@@ -119,10 +119,10 @@ def least_squares_batch_simple(structs,cs,scel,fc2_LR=None,skiprmse=None):
             F -= np.einsum('ijab,njb->nia', -fc2_LR, displacements).flatten()
         else:
             M, F = structs.get_fit_data()
-        return least_squares_simple(M,F,skiprmse)
+        return least_squares(M,F,skiprmse)
 
     ## initialize file list and matrices
-    print("\n## least_squares_batch_simple ##")
+    print("\n## least_squares_batch ##")
 
     ## build the file lists
     lfile = []
@@ -238,6 +238,57 @@ def least_squares_batch_simple(structs,cs,scel,fc2_LR=None,skiprmse=None):
     Fabsavg = Fsumabs/Fnum*1000
 
     return coefs, rmse, Fabsavg, r2, ar2
+
+def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
+    """
+    Least squares, accumulating in a single structurecontainer.
+    structs can be a string w regexp, a list of strings w regexps, ase atoms, structurecontainer
+    """
+
+    ## build the structure container
+    if (isinstance(structs,StructureContainer)):
+        sc = structs
+    else:
+        ## build our own sc
+        sc = StructureContainer(cs)
+
+        ## build the file lists
+        lfile = []
+        if isinstance(structs,str):
+            lfile.extend(glob(structs))
+        else:
+            for i in structs:
+                if isinstance(i,str):
+                    lfile.extend(glob(i))
+                else:
+                    sc.add_structure(i)
+
+        ## must be strings with filenames
+        if lfile:
+            print("\n## least_squares_accum ##")
+            for fname in lfile:
+                atoms = ase.io.read(fname)
+
+                # this is because otherwise the atoms are not in POSCAR order
+                displacements = get_displacements(atoms, scel)
+                forces = atoms.get_forces()
+
+                # append to the structure container
+                atoms_tmp = scel.copy()
+                atoms_tmp.new_array('displacements', displacements)
+                atoms_tmp.new_array('forces', forces)
+                sc.add_structure(atoms_tmp)
+                print("%s %4d %10.4f %10.4f %10.4f" % (fname,len(sc[0]),np.mean([np.linalg.norm(d) for d in sc[0].displacements]),
+                                                       np.mean([np.linalg.norm(d) for d in sc[0].forces]),
+                                                       np.max([np.linalg.norm(d) for d in sc[0].forces])))
+
+    if fc2_LR is not None:
+        displacements = np.array([fs.displacements for fs in sc])
+        M, F = sc.get_fit_data()
+        F -= np.einsum('ijab,njb->nia', -fc2_LR, displacements).flatten()
+    else:
+        M, F = sc.get_fit_data()
+    return least_squares(M,F,skiprmse)
 
 def shuffle_split_cv(M, F, n_splits=5, test_size=0.2, seed=None, verbose=1,
                      standardize=True, last=False, fout=None):

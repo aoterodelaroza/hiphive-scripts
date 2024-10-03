@@ -8,7 +8,7 @@
 
 ## input block ##
 prefix="mgo" ## prefix for the generated files
-outputs="harmonic-*/*.out" ## regular expression for the files (QE,aims=*.out,VASP=*.xml)
+outputs="mgo-01*/*.out" ## regular expression for the files (QE,aims=*.out,VASP=*.xml)
 #################
 
 import pickle
@@ -16,7 +16,7 @@ import numpy as np
 import os
 from hiphive import ClusterSpace, ForceConstantPotential
 from hiphive.utilities import get_displacements
-from hiphive_utilities import write_negative_frequencies_file, least_squares_batch_simple, has_negative_frequencies
+from hiphive_utilities import write_negative_frequencies_file, least_squares_batch, least_squares_accum, has_negative_frequencies
 
 ## deactivate deprecation warnings
 import warnings
@@ -37,7 +37,10 @@ if os.path.isfile(prefix + ".fc2_lr"):
         fc2_LR = pickle.load(f) * fc_factor
 
 ## run least squares
-coefs, rmse, Favgabs, r2, ar2 = least_squares_batch_simple(outputs,cs,scel,fc2_LR)
+if use_batch_lsqr:
+    coefs, rmse, Favgabs, r2, ar2 = least_squares_batch(outputs,cs,scel,fc2_LR)
+else:
+    coefs, rmse, Favgabs, r2, ar2 = least_squares_accum(outputs,cs,scel,fc2_LR)
 
 ## save the force constant potential
 fcp = ForceConstantPotential(cs, coefs)

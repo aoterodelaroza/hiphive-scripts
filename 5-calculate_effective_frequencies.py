@@ -33,7 +33,7 @@ from hiphive.force_constant_model import ForceConstantModel
 from hiphive.utilities import prepare_structures
 from hiphive_utilities import constant_rattle, shuffle_split_cv,\
     write_negative_frequencies_file, generate_phonon_rattled_structures, has_negative_frequencies,\
-    least_squares_batch_simple
+    least_squares_batch, least_squares_accum
 
 ## deactivate deprecation warnings
 import warnings
@@ -94,10 +94,7 @@ rattled_structures = constant_rattle(scel, n_structures, 0.15, rs)
 rattled_structures = prepare_structures(rattled_structures, scel, calc, check_permutation=False)
 
 # calculate the first least squares for the initial parameters
-for s in rattled_structures:
-    sc.add_structure(s)
-coefs, _, _, _, _ = least_squares_batch_simple(sc,cs,scel,skiprmse=1)
-sc.delete_all_structures()
+coefs,_,_,_,_ = least_squares_accum(rattled_structures,cs,skiprmse=1)
 
 # run poor man's self consistent phonon frequencies
 for t in temperatures:
@@ -119,9 +116,10 @@ for t in temperatures:
         # calculate forces at the generated structures
         rattled_structures = prepare_structures(rattled_structures, scel, calc)
 
-        for s in rattled_structures:
-            sc.add_structure(s)
-        coefs, _, _, _, _ = least_squares_batch_simple(sc,cs,scel,skiprmse=1)
+        # least squares
+        for i in rattled_structures:
+            sc.add_structure(i)
+        coefs,_,_,_,_ = least_squares_accum(sc,skiprmse=1)
         sc.delete_all_structures()
 
         # mix the new FC2 with the previous one
