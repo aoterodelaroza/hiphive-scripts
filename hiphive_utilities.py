@@ -138,12 +138,13 @@ def thread_task(fname):
         del M
 
         # get the global arrays as numpy arrays
-        A_np = np.frombuffer(A.get_obj()).reshape((nparam,nparam))
-        b_np = np.frombuffer(b.get_obj()).reshape((nparam,))
-
         # accumulate and clean up the A and b contributions
-        A_np += Asum
-        b_np += bsum
+        with A.get_lock():
+            A_np = np.frombuffer(A.get_obj()).reshape((nparam,nparam))
+            A_np += Asum
+        with b.get_lock():
+            b_np = np.frombuffer(b.get_obj()).reshape((nparam,))
+            b_np += bsum
         del Asum, bsum
 
         # return Asum, bsum, np.sum(np.abs(F)), np.sum(F), len(F)
@@ -204,9 +205,7 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
 
     ## create multiprocessing array with locking, associate numpy arrays
     A = mp.Array('d',nparam * nparam)
-    A_np = np.frombuffer(A.get_obj()).reshape((nparam,nparam))
     b = mp.Array('d',nparam)
-    b_np = np.frombuffer(b.get_obj()).reshape((nparam,))
     A_np.fill(0.)
     b_np.fill(0.)
 
