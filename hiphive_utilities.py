@@ -229,7 +229,7 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
 
     ## run the least squares to calculate coefficients, clean up afterwards
     print("## running least squares",flush=True)
-    coefs = np.linalg.solve(A_np.T.dot(A_np),A_np.T.dot(b_np))
+    coefs = np.linalg.solve(A_np,b_np)
     del A, b, A_np, b_np
 
     if skiprmse is None:
