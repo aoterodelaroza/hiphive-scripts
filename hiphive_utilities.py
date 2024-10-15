@@ -205,7 +205,9 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
 
     ## create multiprocessing array with locking, associate numpy arrays
     A = mp.Array('d',nparam * nparam)
+    A_np = np.frombuffer(A.get_obj()).reshape((nparam,nparam))
     b = mp.Array('d',nparam)
+    b_np = np.frombuffer(b.get_obj()).reshape((nparam,))
     A_np.fill(0.)
     b_np.fill(0.)
 
