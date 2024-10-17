@@ -14,7 +14,6 @@ ncell = [1,2,0,-2,1,-1,0,0,3] ## nice supercell
 calculator = "espresso-in" ## program used for the calculations, case insensitive (vasp,espresso-in,aims)
 maximum_cutoff = 6.2 ## maximum cutoff for this crystal (angstrom, NEWCELL NICE 1 on supercell)
 acoustic_sum_rules = False # whether to use acoustic sum rules (fewer parameters, much slower)
-# nthread_batch_lsqr = 30 # if > 0, use batch least squares (less memory, more CPU) with these many threads
 nthread_batch_lsqr = 30 # if > 0, use batch least squares (less memory, more CPU) with these many threads
 out_kwargs = { ## pass this down to ASE (example for QE)
     'prefix': 'crystal',
@@ -75,7 +74,7 @@ ase.io.write('supercell.geometry.in',scel,format="aims")
 
 # if BORN file exists, read the NAC parameters
 if os.path.isfile("BORN"):
-    print("BORN file is used, generating " + prefix + ".fc2_lr")
+    print("BORN file is used, generating " + prefix + ".fc2_lr",flush=True)
     phcel.nac_params = parse_BORN(phcel.primitive, symprec=1e-5, is_symmetry=True,
                                   filename='BORN')
     phcel.force_constants = np.zeros((len(scel), len(scel), 3, 3))
@@ -89,7 +88,7 @@ if os.path.isfile("BORN"):
 
 # write the FC conversion factor to output
 fc_factor = get_force_constant_conversion_factor(units['force_constants_unit'],interface_mode='vasp')
-print(f'FC unit conversion factor to eV/ang**2: {fc_factor}')
+print(f'FC unit conversion factor to eV/ang**2: {fc_factor}',flush=True)
 
 # create the info file
 with open(prefix + ".info","wb") as f:

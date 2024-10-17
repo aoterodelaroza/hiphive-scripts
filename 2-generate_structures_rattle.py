@@ -30,7 +30,7 @@ units = get_default_physical_units(phcalc)
 
 # initialize random seed
 seed = int(time.time())
-print("# Initialize random seed = %d" % seed)
+print("# Initialize random seed = %d" % seed,flush=True)
 rs = np.random.RandomState(seed)
 
 # read the harmonic cluster space

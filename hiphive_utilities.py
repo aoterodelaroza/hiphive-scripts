@@ -191,7 +191,7 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
         return least_squares(M,F,skiprmse)
 
     ## initialize file list and matrices
-    print("\n## least_squares_batch ##")
+    print("\n## least_squares_batch ##",flush=True)
 
     ## build the structure lists
     atomlist = []
@@ -228,8 +228,8 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
     b_np.fill(0.)
 
     # header message
-    print("## calculating A,b matrices (parallel with %d threads)" % (nthread))
-    print("#[pid] structure-name num-atoms avg-disp avg-force max-force")
+    print("## calculating A,b matrices (parallel with %d threads)" % (nthread),flush=True)
+    print("#[pid] structure-name num-atoms avg-disp avg-force max-force",flush=True)
 
     ## calculate the least-squares matrices (and other data) in parallelized batches
     pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,nparam,A,b,fc2_LR,None,None))
@@ -246,13 +246,13 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
     Fmean = Fsum / Fnum
 
     ## run the least squares to calculate coefficients, clean up afterwards
-    print("## running least squares")
+    print("## running least squares",flush=True)
     coefs = np.linalg.solve(A_np,b_np)
     del A, b, A_np, b_np
 
     if skiprmse is None:
         ## header and initialize
-        print("## calculating rmse (parallel with %d threads)" % (nthread))
+        print("## calculating rmse (parallel with %d threads)" % (nthread),flush=True)
         ssq = 0.
         sstot = 0.
 
@@ -273,7 +273,7 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
         r2 = 0.
         ar2 = 0.
     Fabsavg = Fsumabs/Fnum
-    print()
+    print(flush=True)
 
     return coefs, rmse, Fabsavg, r2, ar2
 
@@ -318,7 +318,7 @@ def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
 
         ## must be strings with filenames
         if lfile:
-            print("\n## least_squares_accum ##")
+            print("\n## least_squares_accum ##",flush=True)
             for fname in lfile:
                 atoms = ase.io.read(fname)
 
@@ -333,8 +333,7 @@ def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
                 sc.add_structure(atoms_tmp)
                 print("%s %4d %10.4f %10.4f %10.4f" % (fname,len(sc[-1]),np.mean([np.linalg.norm(d) for d in sc[-1].displacements]),
                                                        np.mean([np.linalg.norm(d) for d in sc[-1].forces]),
-                                                       np.max([np.linalg.norm(d) for d in sc[-1].forces])))
-
+                                                       np.max([np.linalg.norm(d) for d in sc[-1].forces])),flush=True)
 
 
     if fc2_LR is not None:
@@ -343,6 +342,7 @@ def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
         F -= np.einsum('ijab,njb->nia', -fc2_LR, displacements).flatten()
     else:
         M, F = sc.get_fit_data()
+
     return least_squares(M,F,skiprmse)
 
 def has_negative_frequencies(freqs,threshold=10):
@@ -363,16 +363,16 @@ def write_negative_frequencies_file(mesh,filename):
     are negative frequencies to the file filename.
     """
     from phonopy.units import THzToCm
-    print("Negative frequencies file written to: ",filename)
+    print("Negative frequencies file written to: ",filename,flush=True)
 
     f = open(filename,"w")
-    print("# List of negative frequencies and q-points",file=f)
+    print("# List of negative frequencies and q-points",file=f,flush=True)
     iqlist, ifreqlist = np.where(mesh.frequencies < 0)
 
     for idx, (iq,ifreq) in enumerate(zip(iqlist,ifreqlist)):
         print("%10.3f   %10.7f, %10.7f, %10.7f" % (
             mesh.frequencies[iq][ifreq]*THzToCm,mesh._qpoints[iq][0],
-            mesh._qpoints[iq][1],mesh._qpoints[iq][2]),file=f)
+            mesh._qpoints[iq][1],mesh._qpoints[iq][2]),file=f,flush=True)
     f.close()
 
 #### TEMPORARY: this is a copy of the phonon rattle code in hiphive.structure_generation ####

@@ -74,14 +74,14 @@ phcel.write_total_DOS(prefix + ".phdos_harmonic")
 #print(phcel._mesh.frequencies)
 #print(phcel._mesh.qpoints)
 #phcel._mesh.write_yaml()
-print("Mesh shape = ",phcel._mesh._mesh)
-print("Negative frequencies in mesh = %d out of %d" % (np.sum(phcel._mesh.frequencies < 0),phcel._mesh.frequencies.size))
-print("Quality of the fit: r2 = %.7f, adjusted-r2 = %.7f" % (r2, ar2))
-print("Quality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, Favgabs*1000))
-print("Harmonic properties at 300 K: Fvib = %.3f kJ/mol, Svib = %.3f J/K/mol" % (fvib,svib))
+print("Mesh shape = ",phcel._mesh._mesh,flush=True)
+print("Negative frequencies in mesh = %d out of %d" % (np.sum(phcel._mesh.frequencies < 0),phcel._mesh.frequencies.size),flush=True)
+print("Quality of the fit: r2 = %.7f, adjusted-r2 = %.7f" % (r2, ar2),flush=True)
+print("Quality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, Favgabs*1000),flush=True)
+print("Harmonic properties at 300 K: Fvib = %.3f kJ/mol, Svib = %.3f J/K/mol" % (fvib,svib),flush=True)
 
 ## write negative frequencies file
 if has_negative_frequencies(phcel._mesh.frequencies):
     filename = prefix + ".fc2_negative_frequencies"
     write_negative_frequencies_file(phcel._mesh,filename)
-print()
+print(flush=True)

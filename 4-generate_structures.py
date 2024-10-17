@@ -47,7 +47,7 @@ n_structures = np.ceil(nparam * 10.0 / (3 * len(scel))).astype(int)
 structures = generate_phonon_rattled_structures(scel,fc2,n_structures,rattle_temperature)
 
 # write the structures
-print("#id filename avg-displacement")
+print("#id filename avg-displacement",flush=True)
 for i, s in enumerate(structures):
     dirname = "anharmonic-%d-%3.3d" % (rattle_temperature,i)
     if os.path.isdir(dirname):
@@ -61,4 +61,4 @@ for i, s in enumerate(structures):
         filename = f'{dirname}/geometry.in'
     ase.io.write(filename,s,format=calculator,**out_kwargs)
 
-    print("%4d %s %.5f" % (i,filename,np.mean([np.linalg.norm(d) for d in get_displacements(s,scel)])))
+    print("%4d %s %.5f" % (i,filename,np.mean([np.linalg.norm(d) for d in get_displacements(s,scel)])),flush=True)

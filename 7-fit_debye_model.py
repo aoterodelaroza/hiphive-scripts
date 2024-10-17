@@ -32,7 +32,6 @@ natom = len(cell)
 # debye and extended debye functions
 def fdebye(t,thetad):
     x = thetad / t
-    print(natom,kB * t * np.log(1 - np.exp(-x)))
     return -natom * kB * t * D3(x) + 3 * natom * kB * t * np.log(1 - np.exp(-x))
 
 def sdebye(t,thetad):
@@ -120,19 +119,19 @@ s = xx[1:,3] * z / 1000 / 4.184 / 627.50947 ## entropy in Ha/K (skip 0 K)
 def lsqr_residuals_debye(x,*args,**kwargs):
     return (s - sdebye(t,x)) / t
 
-print("--- simple debye model fit ---")
+print("--- simple debye model fit ---",flush=True)
 res = scipy.optimize.least_squares(lsqr_residuals_debye, 1000,
                                    bounds=(0,np.inf), ftol=1e-12,
                                    xtol=None, gtol=None, verbose=2)
 
 td = res.x[0]
-print("Initial debye temperature (K) = %.4f\n" % td)
+print("Initial debye temperature (K) = %.4f\n" % td,flush=True)
 
 ## extended debye fit
 def lsqr_residuals_extdebye(x,*args,**kwargs):
     return s - sdebye_ext(t,x)
 
-print("--- extended debye model fit ---")
+print("--- extended debye model fit ---",flush=True)
 res = scipy.optimize.least_squares(lsqr_residuals_extdebye, [td] + npoly*[0],
                                    method='lm', ftol=1e-15, xtol=1e-15,
                                    gtol=1e-15, verbose=2)
@@ -151,9 +150,9 @@ with open(prefix + ".thermal-data","w") as f:
     sd = np.maximum(sdebye_ext(tlist,res.x) * conver,1e-11)
     cd = np.maximum(cvdebye_ext(tlist,res.x) * conver,1e-11)
 
-    print("## T(K) F(Ha) S(Ha/K) Cv(Ha/K)",file=f)
+    print("## T(K) F(Ha) S(Ha/K) Cv(Ha/K)",file=f,flush=True)
     for x in zip(tlist,fd,sd,cd):
-        print("%.2f %.10f %.10f %.10f" % (x[0], x[1], x[2], x[3]),file=f)
+        print("%.2f %.10f %.10f %.10f" % (x[0], x[1], x[2], x[3]),file=f,flush=True)
 
 ## create entropy plot
 t = xx[:,0]

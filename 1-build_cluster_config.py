@@ -32,9 +32,9 @@ with open(prefix + ".cs","wb") as f:
     pickle.dump([cutoffs,cs],f)
 
 # print out some details
-print("--- cluster space details (harmonic) ---")
-print(cs_harmonic)
-print("")
-print("--- cluster space details (complete) ---")
-print(cs)
-print("")
+print("--- cluster space details (harmonic) ---",flush=True)
+print(cs_harmonic,flush=True)
+print("",flush=True)
+print("--- cluster space details (complete) ---",flush=True)
+print(cs,flush=True)
+print("",flush=True)
