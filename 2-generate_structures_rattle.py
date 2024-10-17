@@ -1,10 +1,10 @@
-## 1a-generate_structures_rattle.py: generate random structures by
+## 2-generate_structures_rattle.py: generate random structures by
 ## simple structure rattling using the default phonopy
 ## displacements. These will be used to calculate the first harmonic
-## FC2 for the subsequent phonon rattle.
+## FC2 for the subsequent phonon rattles.
 ##
-## Input: prefix.info
-## Output: a number of subdirectories containing the rattled structures
+## Input: prefix.info, prefix.cs_harmonic
+## Output: a number of subdirectories (harmonic-*/) containing the rattled structures
 
 ## input block ##
 prefix="urea" ## prefix for the generated files

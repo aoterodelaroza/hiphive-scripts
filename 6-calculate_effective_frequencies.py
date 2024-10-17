@@ -1,6 +1,6 @@
 ## 5-calculate_effective_frequencies.py: calculate effective frequencies on a temperature grid from FCn
 ##
-## Input: prefix.info, prefix.fcn
+## Input: prefix.info, prefix.fcn, prefix.cs_harmonic
 ## -> optional: prefix.fc2_lr ## subtract LR from reference forces first, if file present
 ## Output: prefix.svib
 ## -> optional: prefix-<temperature>.fc2_eff ## per-temperature second-order effective force constants

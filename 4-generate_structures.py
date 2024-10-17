@@ -1,7 +1,7 @@
 ## 3-generate_structures.py: generate random structures by phonon rattling.
 ##
-## Input: prefix.info
-## Output: a number of input structures in prefix*/
+## Input: prefix.info, prefix.fc2_harmonic, prefix.cs_harmonic, prefix.cs
+## Output: a number of input structures: anharmonic*/
 
 ## input block ##
 prefix="urea" ## prefix for the generated files

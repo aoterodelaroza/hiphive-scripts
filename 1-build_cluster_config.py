@@ -1,4 +1,5 @@
-## 1-build_cluster_config.py: generate cluster spaces for a given structure.
+## 1-build_cluster_config.py: generate the harmonic and nth-order
+## cluster spaces for a given structure.
 ##
 ## Input: prefix.info
 ## Output: prefix.cs_harmonic prefix.cs

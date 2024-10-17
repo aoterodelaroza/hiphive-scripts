@@ -1,7 +1,8 @@
 ## 0-write_structure_info.py: reads the equilibrum structure and
-## supercell size, builds the supercell, and saves the information to
-## an info file. If the BORN file is available, reads the Born charges
-## and creates the second-order force-constant matrix in file fc2_LR.
+## supercell size, builds the supercell, and saves this and other
+## information to an info file. If the BORN file is available, reads
+## the Born charges and creates the second-order force-constant matrix
+## in file fc2_LR.
 ##
 ## Input: none
 ## Output: prefix.info
