@@ -46,9 +46,9 @@ def constant_rattle(atoms, n_structures, amplitude, seed=None):
 def least_squares(M, F, skiprmse=None):
     """
     Run least squares with matrices M and F and returns the
-    least-squares coefficients. If skiprmse is None,
-    also return the root mean square error, the average absolute F,
-    the r2 coefficient and the adjusted r2.
+    least-squares coefficients. If skiprmse is not None, also return
+    the root mean square error, the average absolute F, the r2
+    coefficient and the adjusted r2.
     """
 
     coefs = np.linalg.solve(M.T.dot(M),M.T.dot(F))
@@ -83,8 +83,8 @@ def thread_init(scel,cs,nparam,A,b,fc2_LR,coefs,Fmean):
 
 def thread_task(atoms):
     """
-    Helper routine for thread work in least_squares_batch. fname is an
-    Atoms object.
+    Helper routine for thread work in least_squares_batch. atoms is an
+    ase Atoms object.
     """
     nparam = batch_dict['nparam']
     A = batch_dict['A']
@@ -178,6 +178,9 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
     least_squares_accum.
 
     This version takes longer than least_squares_accum but uses less memory.
+    Returns the least-squares coefficients. If skiprmse is not None,
+    also return the root mean square error, the average absolute F,
+    the r2 coefficient and the adjusted r2.
     """
 
     ## special case: structs is a structure container => use simple least squares w all data
@@ -292,7 +295,9 @@ def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
     least_squares_accum.
 
     This version is faster than least_squares_accum but loads the
-    whole M into memory.
+    whole M into memory.  Returns the least-squares coefficients. If
+    skiprmse is not None, also return the root mean square error, the
+    average absolute F, the r2 coefficient and the adjusted r2.
     """
 
     nparam = cs.n_dofs
