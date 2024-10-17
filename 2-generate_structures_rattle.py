@@ -7,18 +7,7 @@
 ## Output: a number of subdirectories containing the rattled structures
 
 ## input block ##
-prefix="mgo" ## prefix for the generated files
-out_kwargs = {
-    'prefix': 'crystal',
-    'pseudo_dir': '../..',
-    'tprnfor': True,
-    'ecutwfc': 80.0,
-    'ecutrho': 800.0,
-    'conv_thr': 1e-10,
-    'pseudopotentials': {'O': 'o.UPF', 'Mg': 'mg.UPF'},
-    'kpts': (2,2,2),
-} ## pass this down to ASE (example for QE)
-## out_kwargs = {} ## pass this down to ASE (example for VASP/FHIaims)
+prefix="urea" ## prefix for the generated files
 #################
 
 import math
@@ -36,7 +25,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # read the info file
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel, out_kwargs = pickle.load(f)
 units = get_default_physical_units(phcalc)
 
 # initialize random seed
@@ -44,13 +33,15 @@ seed = int(time.time())
 print("# Initialize random seed = %d" % seed)
 rs = np.random.RandomState(seed)
 
-## Get the displacement distance and get the number of structures created by phonopy
-phdist = get_default_displacement_distance(phcalc)
-phcel.generate_displacements(distance=phdist)
-n_structures = max(math.ceil(len(phcel.supercells_with_displacements)/3),1)
+# read the harmonic cluster space
+with open(prefix + ".cs_harmonic","rb") as f:
+    cutoffs_harmonic,cs_harmonic = pickle.load(f)
+
+## The number of structures is: enough to have at least 10 times as many forces as parameters (rounded up)
+n_structures = np.ceil(cs_harmonic.n_dofs * 10.0 / (3 * len(scel))).astype(int)
 
 ## Generate rattled structures
-rattle_std = phdist * units["distance_to_A"]
+rattle_std = get_default_displacement_distance(phcalc) * units["distance_to_A"]
 structures = constant_rattle(scel, n_structures, rattle_std, rs)
 
 for iz in enumerate(structures):

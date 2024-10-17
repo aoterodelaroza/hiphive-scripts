@@ -8,13 +8,25 @@
 ## --> optional: prefix.fc2_LR
 
 ## input block ##
-prefix="mgo" ## prefix for the generated files
-eq_structure="mgo.scf.in" ## the equilibrium structure
-ncell = [3,0,0, 0,3,0, 0,0,3] ## nice supercell
+prefix="urea" ## prefix for the generated files
+eq_structure="urea.orig.in" ## the equilibrium structure
+ncell = [1,2,0,-2,1,-1,0,0,3] ## nice supercell
 calculator = "espresso-in" ## program used for the calculations, case insensitive (vasp,espresso-in,aims)
-maximum_cutoff = 6.3 ## maximum cutoff for this crystal (angstrom, NEWCELL NICE 1 on supercell)
+maximum_cutoff = 6.2 ## maximum cutoff for this crystal (angstrom, NEWCELL NICE 1 on supercell)
 acoustic_sum_rules = False # whether to use acoustic sum rules (fewer parameters, much slower)
-nthread_batch_lsqr = 10 # if > 0, use batch least squares (less memory, more CPU) with these many threads
+# nthread_batch_lsqr = 30 # if > 0, use batch least squares (less memory, more CPU) with these many threads
+nthread_batch_lsqr = 30 # if > 0, use batch least squares (less memory, more CPU) with these many threads
+out_kwargs = { ## pass this down to ASE (example for QE)
+    'prefix': 'crystal',
+    'pseudo_dir': '../',
+    'tprnfor': True,
+    'ecutwfc': 80.0,
+    'ecutrho': 800.0,
+    'conv_thr': 1e-10,
+    'pseudopotentials': {'C':'c.UPF','O':'o.UPF','N':'n.UPF','H':'h.UPF'},
+    'kpts': (2,2,2),
+} ## pass this down to ASE (example for QE)
+## out_kwargs = {} ## pass this down to ASE (example for VASP/FHIaims)
 #################
 
 import os
@@ -82,4 +94,4 @@ print(f'FC unit conversion factor to eV/ang**2: {fc_factor}')
 # create the info file
 with open(prefix + ".info","wb") as f:
     pickle.dump([calculator.lower(), maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc,
-                 ncell, cell, cell_for_cs, scel, fc_factor,phcel],f)
+                 ncell, cell, cell_for_cs, scel, fc_factor,phcel,out_kwargs],f)

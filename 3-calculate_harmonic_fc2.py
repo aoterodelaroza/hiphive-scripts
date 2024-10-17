@@ -7,7 +7,7 @@
 ## Output: prefix.fc2_harmonic
 
 ## input block ##
-prefix="mgo" ## prefix for the generated files
+prefix="urea" ## prefix for the generated files
 outputs="harmonic-*/*.out" ## regular expression for the files (QE,aims=*.out,VASP=*.xml)
 #################
 
@@ -24,11 +24,11 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel, out_kwargs = pickle.load(f)
 
 # build cluster space with only fc2
-cutoffs = [maximum_cutoff]
-cs = ClusterSpace(cell_for_cs, cutoffs, acoustic_sum_rules=acoustic_sum_rules)
+with open(prefix + ".cs_harmonic","rb") as f:
+    cutoffs_harmonic,cs_harmonic = pickle.load(f)
 
 ## read the long-range fc2, if available
 fc2_LR = None
@@ -38,12 +38,12 @@ if os.path.isfile(prefix + ".fc2_lr"):
 
 ## run least squares
 if nthread_batch_lsqr and nthread_batch_lsqr > 0:
-    coefs, rmse, Favgabs, r2, ar2 = least_squares_batch(outputs,nthread_batch_lsqr,cs,scel,fc2_LR)
+    coefs, rmse, Favgabs, r2, ar2 = least_squares_batch(outputs,nthread_batch_lsqr,cs_harmonic,scel,fc2_LR)
 else:
-    coefs, rmse, Favgabs, r2, ar2 = least_squares_accum(outputs,cs,scel,fc2_LR)
+    coefs, rmse, Favgabs, r2, ar2 = least_squares_accum(outputs,cs_harmonic,scel,fc2_LR)
 
 ## save the force constant potential
-fcp = ForceConstantPotential(cs, coefs)
+fcp = ForceConstantPotential(cs_harmonic, coefs)
 fc2 = fcp.get_force_constants(scel).get_fc_array(order=2)
 if fc2_LR is not None:
     fc2 += fc2_LR
@@ -65,6 +65,10 @@ phcel.run_mesh(150.,with_eigenvectors=True)
 phcel.run_thermal_properties(temperatures=300)
 fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
 svib = phcel.get_thermal_properties_dict()['entropy'][0]
+
+## harmonic density of states
+phcel.run_total_dos(freq_pitch=0.1)
+phcel.write_total_DOS(prefix + ".phdos_harmonic")
 
 #print(phcel._mesh.frequencies[phcel._mesh.frequencies < 0])
 #print(phcel._mesh.frequencies)

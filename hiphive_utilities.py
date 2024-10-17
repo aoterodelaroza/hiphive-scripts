@@ -81,10 +81,10 @@ def thread_init(scel,cs,nparam,A,b,fc2_LR,coefs,Fmean):
     batch_dict['coefs'] = coefs
     batch_dict['Fmean'] = Fmean
 
-def thread_task(fname):
+def thread_task(atoms):
     """
-    Helper routine for thread work in least_squares_batch. fname is either an
-    output file or an Atoms object.
+    Helper routine for thread work in least_squares_batch. fname is an
+    Atoms object.
     """
     nparam = batch_dict['nparam']
     A = batch_dict['A']
@@ -96,14 +96,20 @@ def thread_task(fname):
     Fmean = batch_dict['Fmean']
 
     # read structure (string or ASE Atoms object)
-    if (isinstance(fname,str)):
-        atoms = ase.io.read(fname)
-    else:
-        atoms = fname
+    sfname = atoms.name
 
     # this is because otherwise the atoms are not in POSCAR order
-    displacements = get_displacements(atoms, scel)
-    forces = atoms.get_forces()
+    if scel is not None:
+        if hasattr(atoms,'arrays') and 'displacements' in atoms.arrays:
+            displacements = atoms.arrays['displacements']
+        else:
+            displacements = get_displacements(atoms, scel)
+            atoms.arrays['displacements'] = displacements
+    if hasattr(atoms,'arrays') and 'forces' in atoms.arrays:
+        forces = atoms.arrays['forces']
+    else:
+        forces = atoms.get_forces()
+        atoms.arrays['forces'] = forces
 
     # append to the structure container
     atoms_tmp = scel.copy()
@@ -116,14 +122,14 @@ def thread_task(fname):
 
     # create M and F
     if fc2_LR is not None:
-        displacements = np.array([fs.displacements for fs in sc])
+        displ = np.array([fs.displacements for fs in sc])
         M, F = sc.get_fit_data()
-        F -= np.einsum('ijab,njb->nia', -fc2_LR, displacements).flatten()
+        F -= np.einsum('ijab,njb->nia', -fc2_LR, displ).flatten()
     else:
         M, F = sc.get_fit_data()
 
     # print message and clear structurecontainer
-    print("[%d] %s %4d %10.4f %10.4f %10.4f" % (mp.current_process().pid,fname,len(sc[0]),
+    print("[%d] %s %4d %10.4f %10.4f %10.4f" % (mp.current_process().pid,sfname,len(sc[0]),
                                                 np.mean([np.linalg.norm(d) for d in sc[0].displacements]),
                                                 np.mean([np.linalg.norm(d) for d in sc[0].forces]),
                                                 np.max([np.linalg.norm(d) for d in sc[0].forces])),flush=True)
@@ -148,7 +154,7 @@ def thread_task(fname):
         del Asum, bsum
 
         # return Asum, bsum, np.sum(np.abs(F)), np.sum(F), len(F)
-        return np.sum(np.abs(F)), np.sum(F), len(F)
+        return np.sum(np.abs(F)), np.sum(F), len(F), displacements, forces
     else:
         ### calculate ssq and sstot (second pass) ###
         ssq = np.sum((M.dot(coefs) - F)**2)
@@ -165,7 +171,8 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
     the clusterspace (cs) and supercell structure (scel).
 
     - An ASE Atoms object or a list of Atoms objects. Requires the
-    clusterspace (cs).
+    clusterspace (cs) (and supercell structure (scel) if displacements
+    are required in the calculator).
 
     - A structure container. In this case, the effect is the same as
     least_squares_accum.
@@ -184,18 +191,27 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
         return least_squares(M,F,skiprmse)
 
     ## initialize file list and matrices
-    print("\n## least_squares_batch ##",flush=True)
+    print("\n## least_squares_batch ##")
 
-    ## build the file lists
-    lfile = []
+    ## build the structure lists
+    atomlist = []
+    strlist = []
     if isinstance(structs,str):
-        lfile.extend(glob(structs))
+        strlist.extend(glob(structs))
     else:
         for i in structs:
             if isinstance(i,str):
-                lfile.extend(glob(i))
+                strlist.extend(glob(i))
             else:
-                lfile.append(i)
+                atomlist.append(i)
+                atomlist[-1].name = "ase.atoms"
+    for i in strlist:
+        atomlist.append(ase.io.read(i))
+        atomlist[-1].name = i
+
+    ## check the list is not empty
+    if not atomlist:
+        raise Exception("No structures found")
 
     ## initialize
     Fsum = 0.
@@ -212,15 +228,17 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
     b_np.fill(0.)
 
     # header message
-    print("## calculating A,b matrices (parallel with %d threads)" % (nthread),flush=True)
-    print("#[pid] structure-name num-atoms avg-disp avg-force max-force",flush=True)
+    print("## calculating A,b matrices (parallel with %d threads)" % (nthread))
+    print("#[pid] structure-name num-atoms avg-disp avg-force max-force")
 
     ## calculate the least-squares matrices (and other data) in parallelized batches
     pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,nparam,A,b,fc2_LR,None,None))
-    for result in pool.imap_unordered(thread_task,lfile):
+    for atoms,result in zip(atomlist,pool.imap(thread_task,atomlist)):
         Fsumabs += result[0]
         Fsum += result[1]
         Fnum += result[2]
+        atoms.arrays['displacements'] = result[3]
+        atoms.arrays['forces'] = result[4]
     pool.close()
     pool.join()
     if Fnum == 0:
@@ -228,19 +246,19 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
     Fmean = Fsum / Fnum
 
     ## run the least squares to calculate coefficients, clean up afterwards
-    print("## running least squares",flush=True)
+    print("## running least squares")
     coefs = np.linalg.solve(A_np,b_np)
     del A, b, A_np, b_np
 
     if skiprmse is None:
         ## header and initialize
-        print("## calculating rmse (parallel with %d threads)" % (nthread),flush=True)
+        print("## calculating rmse (parallel with %d threads)" % (nthread))
         ssq = 0.
         sstot = 0.
 
         ## calculate the rmse in parallel
         pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,nparam,None,None,fc2_LR,coefs,Fmean))
-        for result in pool.imap_unordered(thread_task,lfile):
+        for result in pool.imap_unordered(thread_task,atomlist):
             ssq += result[0]
             sstot += result[1]
         pool.close()
@@ -277,6 +295,9 @@ def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
     whole M into memory.
     """
 
+    nparam = cs.n_dofs
+    Asum = np.zeros((nparam,nparam))
+
     ## build the structure container
     if (isinstance(structs,StructureContainer)):
         sc = structs
@@ -310,9 +331,11 @@ def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
                 atoms_tmp.new_array('displacements', displacements)
                 atoms_tmp.new_array('forces', forces)
                 sc.add_structure(atoms_tmp)
-                print("%s %4d %10.4f %10.4f %10.4f" % (fname,len(sc[0]),np.mean([np.linalg.norm(d) for d in sc[0].displacements]),
-                                                       np.mean([np.linalg.norm(d) for d in sc[0].forces]),
-                                                       np.max([np.linalg.norm(d) for d in sc[0].forces])))
+                print("%s %4d %10.4f %10.4f %10.4f" % (fname,len(sc[-1]),np.mean([np.linalg.norm(d) for d in sc[-1].displacements]),
+                                                       np.mean([np.linalg.norm(d) for d in sc[-1].forces]),
+                                                       np.max([np.linalg.norm(d) for d in sc[-1].forces])))
+
+
 
     if fc2_LR is not None:
         displacements = np.array([fs.displacements for fs in sc])

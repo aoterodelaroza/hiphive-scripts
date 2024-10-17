@@ -10,9 +10,8 @@
 import numpy as np
 
 ## input block ##
-prefix="mgo" ## prefix for the generated files
-n_structures = 10 # number of structures used in scph
-temperatures = np.arange(100,2700,100) # temperature list (0 is always included) eg: np.arange(440, 0, -10)
+prefix="urea" ## prefix for the generated files
+temperatures = np.arange(10,500,50) # temperature list (0 is always included) eg: np.arange(440, 0, -10)
 write_fc2eff = False # write the second-order effective force constants file (prefix-temp.fc2_eff)
 #################
 
@@ -31,7 +30,7 @@ from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
 from hiphive import ForceConstants
 from hiphive.calculators import ForceConstantCalculator
 from hiphive.force_constant_model import ForceConstantModel
-from hiphive.utilities import prepare_structures
+from hiphive.utilities import get_displacements
 from hiphive_utilities import constant_rattle,\
     write_negative_frequencies_file, generate_phonon_rattled_structures, has_negative_frequencies,\
     least_squares_batch, least_squares_accum
@@ -42,11 +41,11 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel, out_kwargs = pickle.load(f)
 
 # initialize random seed
 seed = int(time.time())
-print(f'Initialized random seed: {seed}')
+print(f'Initialized random seed: {seed}',flush=True)
 rs = np.random.RandomState(seed)
 
 # read fcn and fc2_lr
@@ -56,8 +55,14 @@ if os.path.isfile(prefix + ".fc2_lr"):
     with open(prefix + ".fc2_lr","rb") as f:
         fc2_LR = pickle.load(f) * fc_factor
 
-# just in case an FC file is read automatically by phonopy
-cs = ClusterSpace(cell_for_cs,[maximum_cutoff], acoustic_sum_rules=acoustic_sum_rules)
+# read the harmonic cluster space, calculate the number of structures
+with open(prefix + ".cs_harmonic","rb") as f:
+    cutoffs_harmonic,cs_harmonic = pickle.load(f)
+n_structures = np.ceil(cs_harmonic.n_dofs * 10.0 / (3 * len(scel))).astype(int)
+print("Number of structures: %d" % n_structures,flush=True)
+
+# prepare the force constant calculator, clean phcel force constants
+# in case an FC file is read automatically by phonopy
 fcs = fcp.get_force_constants(scel)
 calc = ForceConstantCalculator(fcs)
 phcel.force_constants = np.zeros((len(scel), len(scel), 3, 3))
@@ -76,30 +81,33 @@ phcel.run_mesh(150.)
 phcel.run_thermal_properties(temperatures=0)
 fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
 svib = phcel.get_thermal_properties_dict()['entropy'][0]
-print("\nHarmonic properties at zero temperature (kJ/mol): fvib = %.3f svib = %.3f\n" % (fvib,svib))
+print("\nHarmonic properties at zero temperature (kJ/mol): fvib = %.3f svib = %.3f\n" % (fvib,svib),flush=True)
 
 # header
 print("# Anharmonic thermodynamic properties calculated with scph using",
-      f"{n_structures} structures and {n_max} iterations",file=fout)
-print("# F does not contain the anharmonic term",file=fout)
-print("# T in K, F in kJ/mol, S in J/K/mol",file=fout)
-print("# T Fvib Fvibstd Svib Svibstd",file=fout)
-print("%.2f %.8f %.8f %.8f %.8f" % (0,fvib,0,svib,0),file=fout)
+      f"{n_structures} structures and {n_max} iterations",file=fout,flush=True)
+print("# F does not contain the anharmonic term",file=fout,flush=True)
+print("# T in K, F in kJ/mol, S in J/K/mol",file=fout,flush=True)
+print("# T Fvib Fvibstd Svib Svibstd",file=fout,flush=True)
+print("%.2f %.8f %.8f %.8f %.8f" % (0,fvib,0,svib,0),file=fout,flush=True)
 
-# initialize structure container and force constant model
-sc = StructureContainer(cs)
-fcm = ForceConstantModel(scel, cs)
+# initialize force constant model
+fcm = ForceConstantModel(scel, cs_harmonic)
 
-# generate initial model
+# generate initial set of structures (0.15 ang in amplitude), add the calculator to each structure
 rattled_structures = constant_rattle(scel, n_structures, 0.15, rs)
-rattled_structures = prepare_structures(rattled_structures, scel, calc, check_permutation=False)
+for istr in rattled_structures:
+    istr.calc = calc
 
 # calculate the first least squares for the initial parameters
-coefs,_,_,_,_ = least_squares_accum(rattled_structures,cs,skiprmse=1)
+if nthread_batch_lsqr and nthread_batch_lsqr > 0:
+    coefs, _, _, _, _ = least_squares_batch(rattled_structures,nthread_batch_lsqr,cs_harmonic,scel,skiprmse=1)
+else:
+    coefs, _, _, _, _ = least_squares_accum(rattled_structures,cs_harmonic,scel,skiprmse=1)
 
 # run poor man's self consistent phonon frequencies
 for t in temperatures:
-    print("\nStarted scph at temperature: %.2f K" % t);
+    print("\nStarted scph at temperature: %.2f K" % t,flush=True)
     param_old = coefs.copy()
     flist, slist = [], []
 
@@ -113,19 +121,18 @@ for t in temperatures:
 
         # generate phonon rattled structures with the current fc2
         rattled_structures = generate_phonon_rattled_structures(scel,fc2,n_structures,t)
-
-        # calculate forces at the generated structures
-        rattled_structures = prepare_structures(rattled_structures, scel, calc)
+        for istr in rattled_structures:
+            istr.calc = calc
 
         # least squares
-        for i in rattled_structures:
-            sc.add_structure(i)
-        coefs,_,_,_,_ = least_squares_accum(sc,skiprmse=1)
-        sc.delete_all_structures()
+        if nthread_batch_lsqr and nthread_batch_lsqr > 0:
+            coefs, _, _, _, _ = least_squares_batch(rattled_structures,nthread_batch_lsqr,cs_harmonic,scel,skiprmse=1)
+        else:
+            coefs, _, _, _, _ = least_squares_accum(rattled_structures,cs_harmonic,scel,skiprmse=1)
 
         # mix the new FC2 with the previous one
         param_new = alpha * coefs + (1-alpha) * param_old
-        fc2 = ForceConstantPotential(cs, param_new).get_force_constants(scel).get_fc_array(order=2) # only short-range
+        fc2 = ForceConstantPotential(cs_harmonic, param_new).get_force_constants(scel).get_fc_array(order=2) # only short-range
         if os.path.isfile(prefix + ".fc2_lr"):
             fc2 += fc2_LR
 
@@ -164,16 +171,15 @@ for t in temperatures:
         print(f'{it}: {negstr} x_new = {x_new_norm:.3e},',
               f'delta_x = {delta_x_norm:.3e},',
               f'disp_ave = {disp_ave:.5f}, fvib = {fvib:.3f},',
-              f'svib = {svib:.3f}')
+              f'svib = {svib:.3f}',flush=True)
 
         if (len(slist) > n_last-1):
             mae = np.mean(np.abs(slist[-n_last:]-slist[-1]))
             if (mae < conv_thr):
-                print("CONVERGED mean(abs(s[-n_last:] - s[-1])) = %.5f < conv_thr = %.5f" % (mae,conv_thr))
+                print("CONVERGED mean(abs(s[-n_last:] - s[-1])) = %.5f < conv_thr = %.5f" % (mae,conv_thr),flush=True)
                 break
             else:
                 print("mean(abs(s[-n_last:] - s[-1])) = %.5f >= conv_thr = %.5f" % (mae,conv_thr),flush=True)
-
 
     # calculate average properties and output
     fvib = np.mean(flist[len(flist)-n_last:len(flist)])
@@ -181,14 +187,15 @@ for t in temperatures:
     fvibstd = np.std(flist[len(flist)-n_last:len(flist)])
     svibstd = np.std(slist[len(slist)-n_last:len(slist)])
     if has_neg:
-        print("Converged [NEGATIVE] (K,kJ/mol,J/K/mol): T = %.2f fvib = %.3f fvibstd = %.5f svib = %.3f svibstd = %.5f" % (t,fvib,fvibstd,svib,svibstd))
-        print("%.2f %.8f %.8f %.8f %.8f (NEG)" % (t,fvib,fvibstd,svib,svibstd),file=fout)
+        print("Converged [NEGATIVE] (K,kJ/mol,J/K/mol): T = %.2f fvib = %.3f fvibstd = %.5f svib = %.3f svibstd = %.5f" % (t,fvib,fvibstd,svib,svibstd),flush=True)
+        print("%.2f %.8f %.8f %.8f %.8f (NEG)" % (t,fvib,fvibstd,svib,svibstd),file=fout,flush=True)
     else:
-        print("Converged (K,kJ/mol,J/K/mol): T = %.2f fvib = %.3f fvibstd = %.5f svib = %.3f svibstd = %.5f" % (t,fvib,fvibstd,svib,svibstd))
-        print("%.2f %.8f %.8f %.8f %.8f" % (t,fvib,fvibstd,svib,svibstd),file=fout)
+        print("Converged (K,kJ/mol,J/K/mol): T = %.2f fvib = %.3f fvibstd = %.5f svib = %.3f svibstd = %.5f" % (t,fvib,fvibstd,svib,svibstd),flush=True)
+        print("%.2f %.8f %.8f %.8f %.8f" % (t,fvib,fvibstd,svib,svibstd),file=fout,flush=True)
 
     if write_fc2eff == True:
         fc2 = ForceConstants.from_arrays(scel, fc2_array=(fc2 / fc_factor),
                                          fc3_array=None)
         fc2.write_to_phonopy(f'./{prefix}-{t:04d}.fc2_eff', format='hdf5')
+
 fout.close()

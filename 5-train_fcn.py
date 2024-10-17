@@ -5,18 +5,14 @@
 ## Output: prefix.fcn
 
 ## input block ##
-prefix="mgo" ## prefix for the generated files
-outputs=["mgo-*/*.out"] # regular expression for the files ()
+prefix="urea" ## prefix for the generated files
+outputs=["*harm*/*.out"] # regular expression for the files ()
 #################
 
 import os
-from glob import glob
 import pickle
 import numpy as np
-import ase
-import time
-from hiphive import StructureContainer, ForceConstantPotential
-from hiphive.utilities import get_displacements
+from hiphive import ForceConstantPotential
 from hiphive_utilities import least_squares_batch, least_squares_accum
 
 ## deactivate deprecation warnings
@@ -25,9 +21,9 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel, out_kwargs = pickle.load(f)
 
-# read the cluster configuration
+# read the (complete) cluster configuration
 with open(prefix + ".cs","rb") as f:
     cutoffs,cs = pickle.load(f)
 
