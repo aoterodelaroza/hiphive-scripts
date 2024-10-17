@@ -31,9 +31,7 @@ out_kwargs = { ## pass this down to ASE (example for QE)
 
 import os
 import pickle
-import ase
-import ase.io
-import ase.build
+import ase, ase.io
 import phonopy
 import numpy as np
 from phonopy.interface.calculator import get_default_physical_units, get_force_constant_conversion_factor

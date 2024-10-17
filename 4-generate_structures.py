@@ -6,12 +6,12 @@
 ## input block ##
 prefix="urea" ## prefix for the generated files
 fc2_phonopy = None ## if given, read the FC2s from phonopy (FORCE_CONSTANTS file)
-rattle_temperature = 100 ## rattle temperature
+rattle_temperature = 50 ## rattle temperature
 #################
 
 import os
 import pickle
-import ase.io
+import ase
 import hiphive as hp
 from hiphive.utilities import get_displacements
 from hiphive_utilities import generate_phonon_rattled_structures

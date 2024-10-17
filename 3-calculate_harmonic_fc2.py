@@ -15,8 +15,7 @@ outputs="harmonic-*/*.out" ## regular expression for the files (QE,aims=*.out,VA
 import pickle
 import numpy as np
 import os
-from hiphive import ClusterSpace, ForceConstantPotential
-from hiphive.utilities import get_displacements
+from hiphive import ForceConstantPotential
 from hiphive_utilities import write_negative_frequencies_file, least_squares_batch, least_squares_accum, has_negative_frequencies
 
 ## deactivate deprecation warnings

@@ -6,9 +6,8 @@ from glob import glob
 import numpy as np
 from hiphive import StructureContainer
 from hiphive.utilities import get_displacements
-import ase, ase.units
+import ase
 import multiprocessing as mp
-import sys
 
 ## dictionary for least_squares_batch global variables
 batch_dict = {}

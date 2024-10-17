@@ -14,7 +14,6 @@ npoly=3 # number of parameters in the polynomial part of extended Debye
 
 import pickle
 import scipy
-import scipy.constants
 import matplotlib.pyplot as plt
 from pygsl.testing.sf import debye_3 as D3
 

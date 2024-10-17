@@ -23,14 +23,11 @@ conv_thr = 0.02 # If mean(abs(s[-n_last:] - s[-1])) < conv_thr, stop the iterati
 #################
 
 import os
-import sys
 import time
 import pickle
-from hiphive import ClusterSpace, StructureContainer, ForceConstantPotential
-from hiphive import ForceConstants
+from hiphive import ForceConstantPotential, ForceConstants
 from hiphive.calculators import ForceConstantCalculator
 from hiphive.force_constant_model import ForceConstantModel
-from hiphive.utilities import get_displacements
 from hiphive_utilities import constant_rattle,\
     write_negative_frequencies_file, generate_phonon_rattled_structures, has_negative_frequencies,\
     least_squares_batch, least_squares_accum

@@ -11,8 +11,6 @@ cutoffs = [6.0,4.0,3.0,2.0] # cutoffs for [2nd,3rd,...] order in angstrom
 
 import pickle
 from hiphive import ClusterSpace
-import numpy as np
-import ase
 
 ## deactivate deprecation warnings
 import warnings

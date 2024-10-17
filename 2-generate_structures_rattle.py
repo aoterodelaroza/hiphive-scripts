@@ -10,10 +10,9 @@
 prefix="urea" ## prefix for the generated files
 #################
 
-import math
 import pickle
 import os
-import ase, ase.io
+import ase
 import time
 import numpy as np
 from phonopy.interface.calculator import get_default_displacement_distance, get_default_physical_units
