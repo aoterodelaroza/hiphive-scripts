@@ -10,7 +10,7 @@ import numpy as np
 prefix="urea" ## prefix for the generated files
 temperatures = np.arange(0, 300, 5) # extended temperature list
 npoly_debye=3 # number of parameters in the polynomial part of extended Debye
-neinstein=1 # number of Einstein terms
+aeinstein=[300.] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
 #################
 
 import pickle
@@ -176,7 +176,7 @@ def cveinstein(t,a):
 
 # combination functions
 ## comp = [npoly in debyeext, neinstein]
-## pin = [coef_debyeext, td, -- npoly_debye --, coef_eins, a_eins, coef_eins, a_eins, ...]
+## pin = [td, -- npoly_debye --, coef_eins, a_eins, coef_eins, a_eins, ...]
 
 def fcombine(t,pin,comp):
     if np.asarray(t).ndim == 0:
@@ -184,13 +184,16 @@ def fcombine(t,pin,comp):
     else:
         f = np.zeros(t.size)
 
-    ## extended debye
-    f += pin[0] * fdebye_ext(t,pin[1:comp[0]+2])
-
     ## einstein
-    n = comp[0]+2
+    sumc = 0.
+    n = comp[0]+1
     for i in range(comp[1]):
         f += pin[n] * feinstein(t,pin[n+1])
+        sumc += pin[n]
+        n+=2
+
+    ## extended debye
+    f += (1.-sumc) * fdebye_ext(t,pin[:comp[0]+1])
 
     return f
 
@@ -200,13 +203,16 @@ def scombine(t,pin,comp):
     else:
         s = np.zeros(t.size)
 
-    ## extended debye
-    s += pin[0] * sdebye_ext(t,pin[1:comp[0]+2])
-
     ## einstein
-    n = comp[0]+2
+    sumc = 0.
+    n = comp[0]+1
     for i in range(comp[1]):
         s += pin[n] * seinstein(t,pin[n+1])
+        sumc += pin[n]
+        n+=2
+
+    ## extended debye
+    s += (1.-sumc) * sdebye_ext(t,pin[:comp[0]+2])
 
     return s
 
@@ -216,13 +222,16 @@ def cvcombine(t,pin,comp):
     else:
         cv = np.zeros(t.size)
 
-    ## extended debye
-    cv += pin[0] * cvdebye_ext(t,pin[1:comp[0]+2])
-
     ## einstein
-    n = comp[0]+2
+    sumc = 0.
+    n = comp[0]+1
     for i in range(comp[1]):
         cv += pin[n] * cveinstein(t,pin[n+1])
+        sumc += pin[n]
+        n+=2
+
+    ## extended debye
+    cv += (1.-sumc) * cvdebye_ext(t,pin[:comp[0]+2])
 
     return cv
 
@@ -248,20 +257,42 @@ def lsqr_residuals_combine(x,*args,**kwargs):
     return s - scombine(t,x,*args)
 
 print("--- combined debye model fit ---",flush=True)
+neinstein = len(aeinstein)
 pattern = [npoly_debye,neinstein]
-pin = [1.0, td] + npoly_debye * [0.0]
+pin = [td] + npoly_debye * [0.0]
 for i in range(neinstein):
-    pin = pin + neinstein * [0., (i+1) * 100.]
-res = scipy.optimize.least_squares(lsqr_residuals_combine, pin,
-                                   method='lm', ftol=1e-15, xtol=1e-15,
+    pin = pin + neinstein * [1e-40, aeinstein[i]]
+
+## set bounds
+lb = np.zeros((len(pin),)) - np.inf
+ub = np.zeros((len(pin),)) + np.inf
+lb[0] = 0. ## td
+n = npoly_debye+1
+for i in range(neinstein):
+    lb[n] = 0.
+    ub[n] = 1.
+    lb[n+1] = 0.
+    n+=2
+
+## run the fit
+res = scipy.optimize.least_squares(lsqr_residuals_combine, pin, bounds=(lb,ub),
+                                   method='trf', ftol=1e-15, xtol=1e-15,
                                    gtol=1e-15, verbose=0,args=[pattern])
 if not res.success:
     raise Exception("Error in final least squares, cannot continue")
-print("Debye model (multiplier = %.10f)" % res.x[0],flush=True)
-print("--> Debye temperature (K) = %.4f" % res.x[1],flush=True)
+
+## calculate the debye coefficient
+sumc = 1.
+n = npoly_debye+1
+for i in range(neinstein):
+    sumc -= res.x[n]
+    n+=2
+
+print("Debye model (multiplier = %.10f)" % sumc,flush=True)
+print("--> Debye temperature (K) = %.4f" % res.x[0],flush=True)
 for i in range(npoly_debye):
-    print("--> extended coefficient %d = %.10f" % (i+1,res.x[2+i]))
-n = npoly_debye + 2
+    print("--> extended coefficient %d = %.10f" % (i+1,res.x[1+i]))
+n = npoly_debye + 1
 for i in range(neinstein):
     print("Einstein contribution %d (multiplier = %.10f) at %.10f K" % (i+1,res.x[n],res.x[n+1]))
     n = n + 2
