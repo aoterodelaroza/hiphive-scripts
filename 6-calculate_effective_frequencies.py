@@ -17,9 +17,9 @@ write_fc2eff = False # write the second-order effective force constants file (pr
 
 ## details of SCPH ##
 alpha = 0.1 # damping factor for the parameters in the scph iterations
-n_max = 35 # max number of steps in scph
+n_max = 100 # max number of steps in scph
 n_last = 10 # n_last steps are used for fvib, svib, etc. averages
-conv_thr = 0.02 # If mean(abs(s[-n_last:] - s[-1])) < conv_thr, stop the iterations [J/K/mol]
+conv_thr = 0.001 # If np.abs(np.sum(np.diff(s[-n_last:]))) / np.mean(s[-n_last:]) < conv_thr, stop the iterations [J/K/mol]
 #################
 
 import os
@@ -171,12 +171,12 @@ for t in temperatures:
               f'svib = {svib:.3f}',flush=True)
 
         if (len(slist) > n_last-1):
-            mae = np.mean(np.abs(slist[-n_last:]-slist[-1]))
-            if (mae < conv_thr):
-                print("CONVERGED mean(abs(s[-n_last:] - s[-1])) = %.5f < conv_thr = %.5f" % (mae,conv_thr),flush=True)
+            xconv = np.abs(np.sum(np.diff(slist[-n_last:]))) / np.mean(slist[-n_last:])
+            if (xconv < conv_thr):
+                print("CONVERGED abs(sum(diff(s[-n_last:]))) / mean(s[-n_last:]) = %.5f < conv_thr = %.5f" % (xconv,conv_thr),flush=True)
                 break
             else:
-                print("mean(abs(s[-n_last:] - s[-1])) = %.5f >= conv_thr = %.5f" % (mae,conv_thr),flush=True)
+                print("abs(sum(diff(s[-n_last:]))) / mean(s[-n_last:]) = %.5f < conv_thr = %.5f" % (xconv,conv_thr),flush=True)
 
     # calculate average properties and output
     fvib = np.mean(flist[len(flist)-n_last:len(flist)])
