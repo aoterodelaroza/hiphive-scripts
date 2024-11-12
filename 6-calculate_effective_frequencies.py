@@ -16,10 +16,10 @@ write_fc2eff = False # write the second-order effective force constants file (pr
 #################
 
 ## details of SCPH ##
-alpha = 0.1 # damping factor for the parameters in the scph iterations
-n_max = 100 # max number of steps in scph
+alpha = [0.1,0.01] # damping factors for the parameters in the scph iterations (fast,slow)
+conv_thr = [1e-3,1e-5] # If np.abs(np.sum(np.diff(s[-n_last:]))) / np.mean(s[-n_last:]) < conv_thr, switch alpha (0) or stop the iterations (1)
+n_max = 500 # max number of steps in scph
 n_last = 10 # n_last steps are used for fvib, svib, etc. averages
-conv_thr = 0.001 # If np.abs(np.sum(np.diff(s[-n_last:]))) / np.mean(s[-n_last:]) < conv_thr, stop the iterations [J/K/mol]
 #################
 
 import os
@@ -103,6 +103,8 @@ else:
     coefs, _, _, _, _ = least_squares_accum(rattled_structures,cs_harmonic,scel,skiprmse=1)
 
 # run poor man's self consistent phonon frequencies
+alpha0 = alpha[0]
+conv_thr0 = conv_thr[0]
 for t in temperatures:
     print("\nStarted scph at temperature: %.2f K" % t,flush=True)
     param_old = coefs.copy()
@@ -128,7 +130,7 @@ for t in temperatures:
             coefs, _, _, _, _ = least_squares_accum(rattled_structures,cs_harmonic,scel,skiprmse=1)
 
         # mix the new FC2 with the previous one
-        param_new = alpha * coefs + (1-alpha) * param_old
+        param_new = alpha0 * coefs + (1-alpha0) * param_old
         fc2 = ForceConstantPotential(cs_harmonic, param_new).get_force_constants(scel).get_fc_array(order=2) # only short-range
         if os.path.isfile(prefix + ".fc2_lr"):
             fc2 += fc2_LR
@@ -172,11 +174,13 @@ for t in temperatures:
 
         if (len(slist) > n_last-1):
             xconv = np.abs(np.sum(np.diff(slist[-n_last:]))) / np.mean(slist[-n_last:])
-            if (xconv < conv_thr):
-                print("CONVERGED abs(sum(diff(s[-n_last:]))) / mean(s[-n_last:]) = %.5f < conv_thr = %.5f" % (xconv,conv_thr),flush=True)
+            if (xconv < conv_thr[1]):
+                print("CONVERGED abs(sum(diff(s[-n_last:]))) / mean(s[-n_last:]) = %.5f < conv_thr = %.5f" % (xconv,conv_thr0),flush=True)
                 break
-            else:
-                print("abs(sum(diff(s[-n_last:]))) / mean(s[-n_last:]) = %.5f < conv_thr = %.5f" % (xconv,conv_thr),flush=True)
+            elif (xconv < conv_thr[0]):
+                alpha0 = alpha[1]
+                conv_thr0 = conv_thr[1]
+            print("alpha=%.2e , abs(sum(diff(s[-n_last:]))) / mean(s[-n_last:]) = %.5f < conv_thr = %.5f" % (alpha0,xconv,conv_thr0),flush=True)
 
     # calculate average properties and output
     fvib = np.mean(flist[len(flist)-n_last:len(flist)])
