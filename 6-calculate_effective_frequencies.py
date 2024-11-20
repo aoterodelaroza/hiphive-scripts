@@ -17,7 +17,7 @@ write_fc2eff = False # write the second-order effective force constants file (pr
 
 ## details of SCPH ##
 alpha = [0.1,0.01] # damping factors for the parameters in the scph iterations (fast,slow)
-conv_thr = [1e-3,1e-5] # If np.abs(np.sum(np.diff(s[-n_last:]))) / np.mean(s[-n_last:]) < conv_thr, switch alpha (0) or stop the iterations (1)
+conv_thr = [1e-3,5e-5] # If np.abs(np.sum(np.diff(s[-n_last:]))) / np.mean(s[-n_last:]) < conv_thr, switch alpha (0) or stop the iterations (1)
 n_max = 500 # max number of steps in scph
 n_last = 10 # n_last steps are used for fvib, svib, etc. averages
 #################
