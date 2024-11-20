@@ -10,7 +10,7 @@ import numpy as np
 prefix="urea" ## prefix for the generated files
 temperatures = np.arange(0, 300, 5) # extended temperature list
 npoly_debye=3 # number of parameters in the polynomial part of extended Debye
-aeinstein=[300.] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
+aeinstein=[1000.] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
 #################
 
 import pickle
