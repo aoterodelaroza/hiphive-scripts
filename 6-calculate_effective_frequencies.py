@@ -11,13 +11,13 @@ import numpy as np
 
 ## input block ##
 prefix="urea" ## prefix for the generated files
-temperatures = np.arange(10,500,50) # temperature list (0 is always included) eg: np.arange(440, 0, -10)
+temperatures = np.hstack((np.arange(10,100,10),np.arange(100,501,50))) # temperature list (0 is always included) eg: np.arange(440, 0, -10)
 write_fc2eff = False # write the second-order effective force constants file (prefix-temp.fc2_eff)
 #################
 
 ## details of SCPH ##
 alpha = [0.1,0.01] # damping factors for the parameters in the scph iterations (fast,slow)
-conv_thr = [1e-3,1e-4] # If np.abs(np.sum(np.diff(s[-n_last:]))) / np.mean(s[-n_last:]) < conv_thr, switch alpha (0) or stop the iterations (1)
+conv_thr = [5e-3,1e-3] # If np.abs(np.sum(np.diff(s[-n_last:]))) / np.mean(s[-n_last:]) < conv_thr, switch alpha (0) or stop the iterations (1)
 n_max = 500 # max number of steps in scph
 n_last = 10 # n_last steps are used for fvib, svib, etc. averages
 #################
@@ -103,13 +103,13 @@ else:
     coefs, _, _, _, _ = least_squares_accum(rattled_structures,cs_harmonic,scel,skiprmse=1)
 
 # run poor man's self consistent phonon frequencies
-alpha0 = alpha[0]
-conv_thr0 = conv_thr[0]
 for t in temperatures:
     print("\nStarted scph at temperature: %.2f K" % t,flush=True)
     param_old = coefs.copy()
     flist, slist = [], []
 
+    i0 = 0
+    itlast = 0
     # run the number of steps indicated by user
     for it in range(n_max):
         # generate structures with new FC2, including the LR correction
@@ -130,7 +130,7 @@ for t in temperatures:
             coefs, _, _, _, _ = least_squares_accum(rattled_structures,cs_harmonic,scel,skiprmse=1)
 
         # mix the new FC2 with the previous one
-        param_new = alpha0 * coefs + (1-alpha0) * param_old
+        param_new = alpha[i0] * coefs + (1-alpha[i0]) * param_old
         fc2 = ForceConstantPotential(cs_harmonic, param_new).get_force_constants(scel).get_fc_array(order=2) # only short-range
         if os.path.isfile(prefix + ".fc2_lr"):
             fc2 += fc2_LR
@@ -167,20 +167,25 @@ for t in temperatures:
         disps = [atoms.get_array('displacements') for atoms in rattled_structures]
         disp_ave = np.mean(np.abs(disps))
         disp_max = np.max(np.abs(disps))
+        if (len(slist) > n_last-1 and it-itlast > n_last-1):
+            xconv = np.abs(np.sum(np.diff(slist[-n_last:]))) / np.mean(slist[-n_last:])
+        else:
+            xconv = 0.
+        print("! %4d : dx = %.3e fvib = %.3f svib = %.3f xconv/thr = %.5f/%.5f" %
+              (it,delta_x_norm,fvib,svib,xconv,conv_thr[i0]),flush=True)
         print(f'{it}: {negstr} x_new = {x_new_norm:.3e},',
               f'delta_x = {delta_x_norm:.3e},',
               f'disp_ave = {disp_ave:.5f}, fvib = {fvib:.3f},',
               f'svib = {svib:.3f}',flush=True)
 
-        if (len(slist) > n_last-1):
-            xconv = np.abs(np.sum(np.diff(slist[-n_last:]))) / np.mean(slist[-n_last:])
-            if (xconv < conv_thr[1]):
-                print("CONVERGED abs(sum(diff(s[-n_last:]))) / mean(s[-n_last:]) = %.5f < conv_thr = %.5f" % (xconv,conv_thr0),flush=True)
+        if (len(slist) > n_last-1 and it-itlast > n_last-1):
+            if (i0 == 1 and xconv < conv_thr[i0]):
+                print("CONVERGED abs(sum(diff(s[-n_last:]))) / mean(s[-n_last:]) = %.5f < conv_thr = %.5f" % (xconv,conv_thr[i0]),flush=True)
                 break
-            elif (xconv < conv_thr[0]):
-                alpha0 = alpha[1]
-                conv_thr0 = conv_thr[1]
-            print("alpha=%.2e , abs(sum(diff(s[-n_last:]))) / mean(s[-n_last:]) = %.5f < conv_thr = %.5f" % (alpha0,xconv,conv_thr0),flush=True)
+            elif (i0 == 0 and xconv < conv_thr[i0]):
+                itlast = it
+                i0 = 1
+            print("alpha=%.2e , abs(sum(diff(s[-n_last:]))) / mean(s[-n_last:]) = %.5f < conv_thr = %.5f" % (alpha[i0],xconv,conv_thr[i0]),flush=True)
 
     # calculate average properties and output
     fvib = np.mean(flist[len(flist)-n_last:len(flist)])
