@@ -37,15 +37,15 @@ natom = len(cell)
 # debye functions
 def fdebye(t,thetad):
     x = thetad / t
-    return -natom * kB * t * D3(x) + 3 * natom * kB * t * np.log(1 - np.exp(-x))
+    return -kB * t * D3(x) + 3 * kB * t * np.log(1 - np.exp(-x))
 
 def sdebye(t,thetad):
     x = thetad / t
-    return -3 * natom * kB * np.log(1 - np.exp(-x)) + 4 * natom * kB * D3(x)
+    return -3 * kB * np.log(1 - np.exp(-x)) + 4 * kB * D3(x)
 
 def cvdebye(t,thetad):
     x = thetad / t
-    return 12 * natom * kB * D3(x) - 9 * natom * kB * x / (np.exp(x) - 1)
+    return 12 * kB * D3(x) - 9 * kB * x / (np.exp(x) - 1)
 
 # debye extended functions
 def fdebye_ext(t,pin):
@@ -60,12 +60,12 @@ def fdebye_ext(t,pin):
     x = t / thetad
     f = np.zeros(x.size)
     idx = t > 1e-5
-    f[idx] = - natom * kB * t[idx] * D3(1/x[idx]) + 3 * natom * kB * t[idx] * np.log(1 - np.exp(-1/x[idx]))
+    f[idx] = - kB * t[idx] * D3(1/x[idx]) + 3 * kB * t[idx] * np.log(1 - np.exp(-1/x[idx]))
 
     term = 0.0
     for i in reversed([0] + [-i[1] / (i[0]+2) for i in enumerate(pin[1:])]):
         term = x * term + i
-    f += natom * kB * t * term
+    f += kB * t * term
 
     if scalar_input:
         return np.squeeze(f)
@@ -83,12 +83,12 @@ def sdebye_ext(t,pin):
     x = t / thetad
     s = np.zeros(x.size)
     idx = t > 1e-5
-    s[idx] = -3 * natom * kB * np.log(1 - np.exp(-1/x[idx])) + 4 * natom * kB * D3(1/x[idx])
+    s[idx] = -3 * kB * np.log(1 - np.exp(-1/x[idx])) + 4 * kB * D3(1/x[idx])
 
     term = 0.0
     for i in reversed([0] + list(pin[1:])):
         term = x * term + i
-    s += natom * kB * term
+    s += kB * term
     if scalar_input:
         return np.squeeze(s)
     return s
@@ -105,11 +105,11 @@ def cvdebye_ext(t,pin):
     x = t / thetad
     cv = np.zeros(x.size)
     idx = t > 1e-5
-    cv[idx] = 12 * natom * kB * D3(1/x[idx]) - 9 * natom * kB / x[idx] / (np.exp(1/x[idx]) - 1)
+    cv[idx] = 12 * kB * D3(1/x[idx]) - 9 * kB / x[idx] / (np.exp(1/x[idx]) - 1)
     term = 0.0
     for i in reversed([i[1] * (i[0]+1) for i in enumerate(pin[1:])]):
         term = x * term + i
-    cv += natom * kB * x * term
+    cv += kB * x * term
 
     if scalar_input:
         return np.squeeze(cv)
@@ -197,7 +197,7 @@ def fcombine(t,pin,comp):
     ## extended debye
     f += (1.-sumc) * fdebye_ext(t,pin[:comp[0]+1])
 
-    return f
+    return natom * f
 
 def scombine(t,pin,comp):
     if np.asarray(t).ndim == 0:
@@ -216,7 +216,7 @@ def scombine(t,pin,comp):
     ## extended debye
     s += (1.-sumc) * sdebye_ext(t,pin[:comp[0]+2])
 
-    return s
+    return natom * s
 
 def cvcombine(t,pin,comp):
     if np.asarray(t).ndim == 0:
@@ -235,7 +235,7 @@ def cvcombine(t,pin,comp):
     ## extended debye
     cv += (1.-sumc) * cvdebye_ext(t,pin[:comp[0]+2])
 
-    return cv
+    return natom * cv
 
 ## read the svib file
 xx = np.loadtxt(prefix + ".svib",usecols=(0,1,2,3,4))
