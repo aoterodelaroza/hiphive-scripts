@@ -7,8 +7,8 @@
 import numpy as np
 
 ## input block ##
-prefix="urea" ## prefix for the generated files
-temperatures = np.arange(0, 300, 5) # extended temperature list
+prefix="mgo" ## prefix for the generated files
+temperatures = np.arange(0, 3010, 10) # temperature list
 npoly_debye=3 # number of parameters in the polynomial part of extended Debye
 aeinstein=[1000.] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
 #################
@@ -175,9 +175,7 @@ def cveinstein(t,a):
     return cv
 
 # combination functions
-## comp = [npoly in debyeext, neinstein]
 ## pin = [td, -- npoly_debye --, coef_eins, a_eins, coef_eins, a_eins, ...]
-
 def fcombine(t,pin,comp):
     if np.asarray(t).ndim == 0:
         f = 0
@@ -300,8 +298,10 @@ print("Final r2 = %.10f\n" % r2_score(s,scombine(t,res.x,pattern)))
 
 ## output the parameters in prefix.xdebye
 with open(prefix + ".xdebye","w") as f:
-    for i in res.x:
-        print(i,file=f)
+    print(res.x[0],npoly_debye,len(aeinstein),end=" ",file=f)
+    for x_ in res.x[1:]:
+        print(x_,end=" ",file=f)
+    print("",file=f)
 
 ## output the temperatures in thermal-data
 with open(prefix + ".thermal-data","w") as f:
