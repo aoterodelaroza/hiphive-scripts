@@ -269,7 +269,7 @@ neinstein = len(aeinstein)
 pattern = [npoly_debye,neinstein]
 pin = [td] + npoly_debye * [0.0]
 for i in range(neinstein):
-    pin = pin + neinstein * [1e-40, aeinstein[i]]
+    pin = pin + [1e-40, aeinstein[i]]
 
 ## set bounds
 lb = np.zeros((len(pin),)) - np.inf
@@ -309,8 +309,12 @@ print("Final r2 = %.10f\n" % r2_score(s,scombine(t,res.x,pattern)))
 ## output the parameters in prefix.xdebye
 ## pin = [td, -- npoly_debye --, coef_eins, a_eins, coef_eins, a_eins, ...]
 with open(prefix + ".xdebye","w") as f:
-    print(f0,res.x[0],npoly_debye,len(aeinstein),end=" ",file=f)
-    for x_ in res.x[1:]:
+    print(f0,res.x[0],end=" ",file=f)
+    for x_ in res.x[1:1+npoly_debye]:
+        print(x_,end=" ",file=f)
+    for x_ in res.x[npoly_debye+1::2]:
+        print(x_,end=" ",file=f)
+    for x_ in res.x[npoly_debye+2::2]:
         print(x_,end=" ",file=f)
     print("",file=f)
 
