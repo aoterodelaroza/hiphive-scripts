@@ -2,8 +2,10 @@
 ## fit parameters and list of (T,F,S,Cv)
 ##
 ## Input: prefix.info, prefix.svib
-## Output: prefix.xdebye, prefix.thermal-data, prefix.png
-
+## Output: prefix.xdebye, prefix.thermal-data, prefix.pdf
+##
+## .xdebye contains: F0 in hartree, npoly, neinstein, TD, aD0, aD1,..., c1, TE1, c2, TE2,...
+##
 import numpy as np
 
 ## input block ##
@@ -175,7 +177,9 @@ def cveinstein(t,a):
     return cv
 
 # combination functions
+## comp = [npoly in debyeext, neinstein]
 ## pin = [td, -- npoly_debye --, coef_eins, a_eins, coef_eins, a_eins, ...]
+
 def fcombine(t,pin,comp):
     if np.asarray(t).ndim == 0:
         f = 0
@@ -235,6 +239,12 @@ def cvcombine(t,pin,comp):
 
 ## read the svib file
 xx = np.loadtxt(prefix + ".svib",usecols=(0,1,2,3,4))
+
+# check that the first temperature is zero
+if not np.isclose(xx[0,0],0):
+    raise Exception("The first temperature must be zero for the Debye fit.")
+
+## skip the first temperature, save the zero-point Fvib
 f0 = xx[0,1] * z / 4.184 / 627.50947 ## zero-point energy in Ha
 t = xx[1:,0] ## temperature in K (skip 0 K)
 s = xx[1:,3] * z / 1000 / 4.184 / 627.50947 ## entropy in Ha/K (skip 0 K)
@@ -297,8 +307,9 @@ for i in range(neinstein):
 print("Final r2 = %.10f\n" % r2_score(s,scombine(t,res.x,pattern)))
 
 ## output the parameters in prefix.xdebye
+## pin = [td, -- npoly_debye --, coef_eins, a_eins, coef_eins, a_eins, ...]
 with open(prefix + ".xdebye","w") as f:
-    print(res.x[0],npoly_debye,len(aeinstein),end=" ",file=f)
+    print(f0,res.x[0],npoly_debye,len(aeinstein),end=" ",file=f)
     for x_ in res.x[1:]:
         print(x_,end=" ",file=f)
     print("",file=f)
