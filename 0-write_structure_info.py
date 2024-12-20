@@ -59,7 +59,9 @@ cell = ase.io.read(eq_structure)
 
 # supercell: make one phonopy and VASP like
 units = get_default_physical_units(phcalc)
-ph = phonopy.load(unitcell_filename=eq_structure,supercell_matrix=ncell.T,calculator=phcalc,produce_fc=False)
+ph = phonopy.load(unitcell_filename=eq_structure,supercell_matrix=ncell.T,primitive_matrix=np.eye(3),calculator=phcalc,produce_fc=False)
+if os.path.isfile("FORCE_CONSTANTS") or os.path.isfile("FORCE_SETS") or os.path.isfile("force_constants.hdf5"):
+    raise Exception("FORCE_CONSTANTS/FORCE_SETS/force_constants.hdf5 is present in this directory; stopping")
 phcel = ph ## save the phonopy cell (problems with primitive cells)
 ph = ph.supercell
 scel = ase.Atoms(symbols=ph.symbols,scaled_positions=ph.scaled_positions,cell=ph.cell*units["distance_to_A"],pbc=[1,1,1])
