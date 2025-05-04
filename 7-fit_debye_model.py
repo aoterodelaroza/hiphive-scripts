@@ -214,7 +214,7 @@ def scombine(t,pin,comp):
         n+=2
 
     ## extended debye
-    s += (1.-sumc) * sdebye_ext(t,pin[:comp[0]+2])
+    s += (1.-sumc) * sdebye_ext(t,pin[:comp[0]+1])
 
     return natom * s
 
