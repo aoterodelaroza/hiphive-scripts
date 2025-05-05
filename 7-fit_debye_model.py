@@ -233,7 +233,7 @@ def cvcombine(t,pin,comp):
         n+=2
 
     ## extended debye
-    cv += (1.-sumc) * cvdebye_ext(t,pin[:comp[0]+2])
+    cv += (1.-sumc) * cvdebye_ext(t,pin[:comp[0]+1])
 
     return natom * cv
 
