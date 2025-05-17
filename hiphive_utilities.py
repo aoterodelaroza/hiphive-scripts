@@ -8,6 +8,7 @@ from hiphive import StructureContainer
 from hiphive.utilities import get_displacements
 import ase
 import multiprocessing as mp
+from hiphive.force_constant_model import ForceConstantModel
 
 ## dictionary for least_squares_batch global variables
 batch_dict = {}
@@ -66,7 +67,7 @@ def least_squares(M, F, skiprmse=None):
 
     return coefs, rmse, Fabsavg, r2, ar2
 
-def thread_init(scel,cs,nparam,A,b,fc2_LR,coefs,Fmean):
+def thread_init(scel,cs,fcm,nparam,A,b,fc2_LR,fc2_subtract,coefs,Fmean):
     """
     Helper routine for thread initialization in least_squares_batch.
     Save variables to the global dictionary.
@@ -76,7 +77,9 @@ def thread_init(scel,cs,nparam,A,b,fc2_LR,coefs,Fmean):
     batch_dict['b'] = b
     batch_dict['scel'] = scel
     batch_dict['cs'] = cs
+    batch_dict['fcm'] = fcm
     batch_dict['fc2_LR'] = fc2_LR
+    batch_dict['fc2_subtract'] = fc2_subtract
     batch_dict['coefs'] = coefs
     batch_dict['Fmean'] = Fmean
 
@@ -90,7 +93,9 @@ def thread_task(atoms):
     b = batch_dict['b']
     scel = batch_dict['scel']
     cs = batch_dict['cs']
+    fcm = batch_dict['fcm']
     fc2_LR = batch_dict['fc2_LR']
+    fc2_subtract = batch_dict['fc2_subtract']
     coefs = batch_dict['coefs']
     Fmean = batch_dict['Fmean']
 
@@ -115,24 +120,19 @@ def thread_task(atoms):
     atoms_tmp.new_array('displacements', displacements)
     atoms_tmp.new_array('forces', forces)
 
-    # create the structure container
-    sc = StructureContainer(cs)
-    sc.add_structure(atoms_tmp)
+    M = fcm.get_fit_matrix(displacements)
+    F = forces.flatten()
 
-    # create M and F
     if fc2_LR is not None:
-        displ = np.array([fs.displacements for fs in sc])
-        M, F = sc.get_fit_data()
-        F -= np.einsum('ijab,njb->nia', -fc2_LR, displ).flatten()
-    else:
-        M, F = sc.get_fit_data()
+        F -= np.einsum('ijab,jb->ia', -fc2_LR, displacements).flatten()
+    if fc2_subtract is not None:
+        F -= np.einsum('ijab,jb->ia', -fc2_subtract, displacements).flatten()
 
-    # print message and clear structurecontainer
-    print("[%d] %s %4d %10.4f %10.4f %10.4f" % (mp.current_process().pid,sfname,len(sc[0]),
-                                                np.mean([np.linalg.norm(d) for d in sc[0].displacements]),
-                                                np.mean([np.linalg.norm(d) for d in sc[0].forces]),
-                                                np.max([np.linalg.norm(d) for d in sc[0].forces])),flush=True)
-    del sc
+    # print message
+    print("[%d] %s %4d %10.4f %10.4f %10.4f" % (mp.current_process().pid,sfname,len(atoms_tmp),
+                                                np.mean([np.linalg.norm(d) for d in displacements]),
+                                                np.mean([np.linalg.norm(d) for d in forces]),
+                                                np.max([np.linalg.norm(d) for d in forces])),flush=True)
 
     if A is not None and b is not None:
         ### generate the A and b contributions (first pass) ###
@@ -161,7 +161,8 @@ def thread_task(atoms):
 
         return ssq, sstot
 
-def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=None):
+def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,fc2_subtract=None,
+                        skiprmse=None):
     """
     Run least squares in batches to preserve memory using the M and F
     values from the structures in structs. structs can be:
@@ -229,12 +230,16 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
     A_np.fill(0.)
     b_np.fill(0.)
 
+    print("## preparing the force constant model",flush=True)
+    fcm = ForceConstantModel(scel,cs)
+
     # header message
     print("## calculating A,b matrices (parallel with %d threads)" % (nthread),flush=True)
     print("#[pid] structure-name num-atoms avg-disp avg-force max-force",flush=True)
 
     ## calculate the least-squares matrices (and other data) in parallelized batches
-    pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,nparam,A,b,fc2_LR,None,None))
+    pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,fcm,nparam,A,b,
+                                                                  fc2_LR,fc2_subtract,None,None))
     for atoms,result in zip(atomlist,pool.imap(thread_task,atomlist)):
         Fsumabs += result[0]
         Fsum += result[1]
@@ -259,7 +264,7 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,skiprmse=N
         sstot = 0.
 
         ## calculate the rmse in parallel
-        pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,nparam,None,None,fc2_LR,coefs,Fmean))
+        pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,fcm,nparam,None,None,fc2_LR,fc2_subtract,coefs,Fmean))
         for result in pool.imap_unordered(thread_task,atomlist):
             ssq += result[0]
             sstot += result[1]
