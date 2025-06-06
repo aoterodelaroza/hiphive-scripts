@@ -62,9 +62,10 @@ with open(prefix + ".fc2_harmonic","wb") as f:
 ## update phonopy
 phcel.force_constants = fc2
 phcel.run_mesh(150.,with_eigenvectors=True)
-phcel.run_thermal_properties(temperatures=300)
-fvib = phcel.get_thermal_properties_dict()['free_energy'][0]
-svib = phcel.get_thermal_properties_dict()['entropy'][0]
+phcel.run_thermal_properties(temperatures=[0,300])
+fvib0 = phcel.get_thermal_properties_dict()['free_energy'][0]
+fvib = phcel.get_thermal_properties_dict()['free_energy'][1]
+svib = phcel.get_thermal_properties_dict()['entropy'][1]
 
 ## harmonic density of states
 phcel.run_total_dos(freq_pitch=0.1)
@@ -78,6 +79,7 @@ print("Mesh shape = ",phcel._mesh._mesh,flush=True)
 print("Negative frequencies in mesh = %d out of %d" % (np.sum(phcel._mesh.frequencies < 0),phcel._mesh.frequencies.size),flush=True)
 print("Quality of the fit: r2 = %.7f, adjusted-r2 = %.7f" % (r2, ar2),flush=True)
 print("Quality of the fit: RMSE = %.7f meV/ang, avg-abs-F = %.7f meV/ang" % (rmse*1000, Favgabs*1000),flush=True)
+print("Harmonic properties at   0 K: Fvib = %.3f kJ/mol" % (fvib0),flush=True)
 print("Harmonic properties at 300 K: Fvib = %.3f kJ/mol, Svib = %.3f J/K/mol" % (fvib,svib),flush=True)
 
 ## write negative frequencies file
