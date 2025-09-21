@@ -69,7 +69,7 @@ svib = phcel.get_thermal_properties_dict()['entropy'][1]
 
 ## harmonic density of states
 phcel.run_total_dos(freq_pitch=0.1)
-phcel.write_total_DOS(prefix + ".phdos_harmonic")
+phcel.write_total_dos(prefix + ".phdos_harmonic")
 
 #print(phcel._mesh.frequencies[phcel._mesh.frequencies < 0])
 #print(phcel._mesh.frequencies)
