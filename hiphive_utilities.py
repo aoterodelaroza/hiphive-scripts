@@ -161,8 +161,7 @@ def thread_task(atoms):
 
         return ssq, sstot
 
-def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,fc2_subtract=None,
-                        skiprmse=None):
+def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,fc2_subtract=None):
     """
     Run least squares in batches to preserve memory using the M and F
     values from the structures in structs. structs can be:
@@ -178,9 +177,7 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,fc2_subtra
     least_squares_accum.
 
     This version takes longer than least_squares_accum but uses less memory.
-    Returns the least-squares coefficients. If skiprmse is not None,
-    also return the root mean square error, the average absolute F,
-    the r2 coefficient and the adjusted r2.
+    Returns the least-squares coefficients.
     """
 
     ## special case: structs is a structure container => use simple least squares w all data
@@ -191,7 +188,7 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,fc2_subtra
             F -= np.einsum('ijab,njb->nia', -fc2_LR, displacements).flatten()
         else:
             M, F = structs.get_fit_data()
-        return least_squares(M,F,skiprmse)
+        return least_squares(M,F)
 
     ## initialize file list and matrices
     print("\n## least_squares_batch ##",flush=True)
@@ -218,6 +215,7 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,fc2_subtra
 
     ## initialize
     Fsum = 0.
+    Fsum2 = 0.
     Fsumabs = 0.
     Fnum = 0
     nparam = cs.n_dofs
@@ -246,6 +244,7 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,fc2_subtra
         Fnum += result[2]
         atoms.arrays['displacements'] = result[3]
         atoms.arrays['forces'] = result[4]
+        Fsum2 += np.sum(result[4]**2)
     pool.close()
     pool.join()
     if Fnum == 0:
@@ -255,36 +254,20 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,fc2_subtra
     ## run the least squares to calculate coefficients, clean up afterwards
     print("## running least squares",flush=True)
     coefs = np.linalg.solve(A_np,b_np)
+    ssq = (coefs.T @ A_np - b_np.T) @ coefs - coefs.T @ b_np + Fsum2
     del A, b, A_np, b_np
 
-    if skiprmse is None:
-        ## header and initialize
-        print("## calculating rmse (parallel with %d threads)" % (nthread),flush=True)
-        ssq = 0.
-        sstot = 0.
-
-        ## calculate the rmse in parallel
-        pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,fcm,nparam,None,None,fc2_LR,fc2_subtract,coefs,Fmean))
-        for result in pool.imap_unordered(thread_task,atomlist):
-            ssq += result[0]
-            sstot += result[1]
-        pool.close()
-        pool.join()
-
-        ## calculate rmse, r2, adjusted r2
-        rmse = np.sqrt(ssq / Fnum)
-        r2 = 1 - ssq / sstot
-        ar2 = 1 - (1 - r2) * (Fnum - 1) / (Fnum - nparam - 1)
-    else:
-        rmse = 0.
-        r2 = 0.
-        ar2 = 0.
+    ## calculate rmse, r2, adjusted r2
+    sstot = Fsum2 + Fmean * Fmean - 2 * Fmean * Fsum
+    rmse = np.sqrt(ssq / Fnum)
+    r2 = 1 - ssq / sstot
+    ar2 = 1 - (1 - r2) * (Fnum - 1) / (Fnum - nparam - 1)
     Fabsavg = Fsumabs/Fnum
     print(flush=True)
 
     return coefs, rmse, Fabsavg, r2, ar2
 
-def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
+def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None):
     """
     Run least squares using the M and F values from the structures in
     structs. structs can be:
@@ -299,9 +282,7 @@ def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
     least_squares_accum.
 
     This version is faster than least_squares_accum but loads the
-    whole M into memory.  Returns the least-squares coefficients. If
-    skiprmse is not None, also return the root mean square error, the
-    average absolute F, the r2 coefficient and the adjusted r2.
+    whole M into memory.  Returns the least-squares coefficients.
     """
 
     nparam = cs.n_dofs
@@ -352,7 +333,7 @@ def least_squares_accum(structs,cs=None,scel=None,fc2_LR=None,skiprmse=None):
     else:
         M, F = sc.get_fit_data()
 
-    return least_squares(M,F,skiprmse)
+    return least_squares(M,F)
 
 def has_negative_frequencies(freqs,threshold=10):
     """
