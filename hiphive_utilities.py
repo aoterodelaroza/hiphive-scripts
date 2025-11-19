@@ -476,6 +476,13 @@ class _PhononRattler:
         D *= force_constants
         # find frequnecies and eigenvectors
         w2_s, e_sai = np.linalg.eigh(D)
+
+        # You have: sqrt(eV / angstrom^2 / amu)
+        # You want: THz
+        # 	* 98.226947
+        # 	/ 0.010180506
+        # print(np.sqrt(w2_s) * 98.226947 * 33.3564095 / (2 * np.pi))
+
         # reshape to get atom index and Cartesian index separate
         e_sai = e_sai.T.reshape(-1, n_atoms, 3)
 
