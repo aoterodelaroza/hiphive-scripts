@@ -43,17 +43,13 @@ def constant_rattle(atoms, n_structures, amplitude, seed=None):
 
     return atoms_list
 
-def least_squares(M, F, skiprmse=None):
+def least_squares(M, F):
     """
     Run least squares with matrices M and F and returns the
-    least-squares coefficients. If skiprmse is not None, also return
-    the root mean square error, the average absolute F, the r2
-    coefficient and the adjusted r2.
+    least-squares coefficients.
     """
 
     coefs = np.linalg.solve(M.T.dot(M),M.T.dot(F))
-    if skiprmse is not None:
-        return coefs, 0., 0., 0., 0.
 
     nparam = M.shape[1]
     Fnum = len(F)

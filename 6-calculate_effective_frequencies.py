@@ -98,9 +98,9 @@ for istr in rattled_structures:
 
 # calculate the first least squares for the initial parameters
 if nthread_batch_lsqr and nthread_batch_lsqr > 0:
-    coefs, _, _, _, _ = least_squares_batch(rattled_structures,nthread_batch_lsqr,cs_harmonic,scel,skiprmse=1)
+    coefs, _, _, _, _ = least_squares_batch(rattled_structures,nthread_batch_lsqr,cs_harmonic,scel)
 else:
-    coefs, _, _, _, _ = least_squares_accum(rattled_structures,cs_harmonic,scel,skiprmse=1)
+    coefs, _, _, _, _ = least_squares_accum(rattled_structures,cs_harmonic,scel)
 
 # run poor man's self consistent phonon frequencies
 for t in temperatures:
@@ -125,9 +125,9 @@ for t in temperatures:
 
         # least squares
         if nthread_batch_lsqr and nthread_batch_lsqr > 0:
-            coefs, _, _, _, _ = least_squares_batch(rattled_structures,nthread_batch_lsqr,cs_harmonic,scel,skiprmse=1)
+            coefs, _, _, _, _ = least_squares_batch(rattled_structures,nthread_batch_lsqr,cs_harmonic,scel)
         else:
-            coefs, _, _, _, _ = least_squares_accum(rattled_structures,cs_harmonic,scel,skiprmse=1)
+            coefs, _, _, _, _ = least_squares_accum(rattled_structures,cs_harmonic,scel)
 
         # mix the new FC2 with the previous one
         param_new = alpha[i0] * coefs + (1-alpha[i0]) * param_old
