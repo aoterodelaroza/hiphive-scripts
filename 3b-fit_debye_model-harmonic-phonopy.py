@@ -1,8 +1,8 @@
 ## 3b-fit_debye_model-harmonic-phonopy.py: fit extended debye model to
-## S(T) data from the harmonic approximation, calculated using
-## phonopy, and obtain fit parameters.
+## S(T) data from the harmonic approximation, and obtain fit
+## parameters.
 ##
-## Input: thermal_properties.yaml file from phonopy
+## Input: yaml file
 ## Output: prefix.xdebye, prefix.thermal-data, prefix.pdf
 ##
 ## .xdebye contains: F0 in hartree, npoly, neinstein, TD, aD0, aD1,..., c1, TE1, c2, TE2,...
@@ -14,7 +14,7 @@ prefix="xxxx" ## prefix for the generated files
 yamlfile="thermal_properties.yaml"
 npoly_debye=2 # number of parameters in the polynomial part of extended Debye
 aeinstein=[1000,2000] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
-z=4 # number of molecules per unit cell (phonopy outputs per unit cell, z is used to divide f0, etc.)
+z=4 # number of molecules per unit cell
 #################
 
 import scipy
@@ -266,18 +266,18 @@ maxt = np.max(tlisth)
 # filter out the nans
 mask = ~(np.isnan(cv) | np.isnan(svib) | np.isnan(fvib))
 tlisth = tlisth[mask]
-fvib = fvib[mask] / z
-svib = svib[mask] / z
-cv = cv[mask] / z
+fvib = fvib[mask]
+svib = svib[mask]
+cv = cv[mask]
 
 ## skip the first temperature, save the zero-point Fvib
-f0 = f0 / z / 4.184 / 627.50947 ## zero-point energy in Ha
+f0 = f0 / 4.184 / 627.50947 ## zero-point energy in Ha
 t = tlisth[1:] ## temperature in K (skip 0 K)
-s = svib[1:] / 1000 / 4.184 / 627.50947 ## entropy in Ha/K (skip 0 K)
+f = fvib[1:] / 4.184 / 627.50947 - f0 ## free eneryg in Ha (skip 0 K)
 
 ## initial debye fit
 def lsqr_residuals_debye(x,*args,**kwargs):
-    return (s - sdebye(t,x)) / t
+    return (f - fdebye(t,x))
 
 print("--- simple debye model fit ---",flush=True)
 res = scipy.optimize.least_squares(lsqr_residuals_debye, 1000,
@@ -290,7 +290,7 @@ print("Resetting Tdebye to 100 K\n",flush=True)
 
 ## extended debye fit
 def lsqr_residuals_combine(x,*args,**kwargs):
-    return s - scombine(t,x,*args)
+    return f - fcombine(t,x,*args)
 
 print("--- combined debye model fit ---",flush=True)
 neinstein = len(aeinstein)
@@ -332,12 +332,12 @@ n = npoly_debye + 1
 for i in range(neinstein):
     print("Einstein contribution %d (multiplier = %.10f) at %.10f K" % (i+1,res.x[n],res.x[n+1]))
     n = n + 2
-print("Final r2 = %.10f\n" % r2_score(s,scombine(t,res.x,pattern)))
+print("Final r2 = %.10f\n" % r2_score(f,fcombine(t,res.x,pattern)))
 
 ## output the parameters in prefix.xdebye
 ## pin = [td, -- npoly_debye --, coef_eins, a_eins, coef_eins, a_eins, ...]
 with open(prefix + ".xdebye","w") as f:
-    print(f0,res.x[0],end=" ",file=f)
+    print(f0/z,res.x[0],end=" ",file=f)
     for x_ in res.x[1:1+npoly_debye]:
         print(x_,end=" ",file=f)
     for x_ in res.x[npoly_debye+1::2]:
@@ -358,12 +358,10 @@ with open(prefix + ".thermal-data","w") as f:
     for x in zip(tlisth,fd,sd,cd):
         print("%.2f %.10f %.10f %.10f" % (x[0], x[1], x[2], x[3]),file=f,flush=True)
 
-## create entropy plot
-temperatures = np.linspace(tlisth[0],tlisth[-1],1001)
-plt.plot(tlisth,svib,'ok',label='$S_{\\rm harm}$ data')
-plt.plot(temperatures,scombine(temperatures,res.x,pattern) * 1000 * 4.184 * 627.50947,
-         '-r',label='Extended Debye fit')
-plt.xlabel('Temperature (K)')
-plt.ylabel('Entropy (J/K/mol)')
-plt.legend()
-plt.savefig(prefix + '.pdf')
+# ## create entropy plot
+# temperatures = np.linspace(tlisth[0],tlisth[-1],1001)
+# plt.plot(tlisth,svib,'ok',label='$F_{\\rm vib}$ data')
+# plt.plot(temperatures,scombine(temperatures,res.x,pattern) * 1000 * 4.184 * 627.50947,
+# plt.xlabel('Temperature (K)')
+# plt.ylabel('Entropy (J/K/mol)')
+
