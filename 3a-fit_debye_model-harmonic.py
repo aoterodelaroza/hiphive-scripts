@@ -3,25 +3,30 @@
 ## list of (T,F,S,Cv).
 ##
 ## Input: prefix.info, prefix.fc2_harmonic
-## Output: prefix.xdebye, prefix.thermal-data, prefix.pdf
+## Output: prefix.xdebye_harmonic, prefix.thermal-data_harmonic, prefix_harmonic.pdf
 ##
-## .xdebye contains: F0 in hartree, npoly, neinstein, TD, aD0, aD1,..., c1, TE1, c2, TE2,...
+## .xdebye_harmonic contains: F0 in hartree, npoly, neinstein, TD, aD0, aD1,..., c1, TE1, c2, TE2,...
 ##
 import numpy as np
 
 ## input block ##
-prefix="urea" ## prefix for the generated files
-temperatures = np.arange(0, 600, 5) # temperature list
+prefix="xxxx" ## prefix for the generated files
+temperatures = np.arange(0, 1000, 21) # temperature list
 npoly_debye=2 # number of parameters in the polynomial part of extended Debye
-aeinstein=[1000,2000] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
-tdinitial = 100. # if None, use the intial Debye fit temperature; otherwise use this value
+aeinstein=[1000] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
+tdinitial = 300. # if None, use the intial Debye fit temperature; otherwise use this value
 #################
 
 import pickle
 import scipy
 import scipy.constants
 import matplotlib.pyplot as plt
+import sys
+import os
+sys.stderr = open(os.devnull, 'w')
 from pygsl.testing.sf import debye_3 as D3
+sys.stderr.close()
+sys.stderr = sys.__stderr__
 from sklearn.metrics import r2_score
 
 ## deactivate deprecation warnings
@@ -328,9 +333,9 @@ for i in range(neinstein):
     n = n + 2
 print("Final r2 = %.10f\n" % r2_score(s,scombine(t,res.x,pattern)))
 
-## output the parameters in prefix.xdebye
+## output the parameters in prefix.xdebye_harmonic
 ## pin = [td, -- npoly_debye --, coef_eins, a_eins, coef_eins, a_eins, ...]
-with open(prefix + ".xdebye","w") as f:
+with open(prefix + ".xdebye_harmonic","w") as f:
     print(f0,res.x[0],end=" ",file=f)
     for x_ in res.x[1:1+npoly_debye]:
         print(x_,end=" ",file=f)
@@ -340,8 +345,8 @@ with open(prefix + ".xdebye","w") as f:
         print(x_,end=" ",file=f)
     print("",file=f)
 
-## output the temperatures in thermal-data
-with open(prefix + ".thermal-data","w") as f:
+## output the temperatures in thermal-data_harmonic
+with open(prefix + ".thermal-data_harmonic","w") as f:
     #conver = scipy.constants.physical_constants['Hartree energy in eV'][0] ## results in eV
     conver = 1 ## results in Hartree
     tlist = np.array(temperatures)
@@ -360,5 +365,5 @@ plt.plot(temperatures,scombine(temperatures,res.x,pattern) * 1000 * 4.184 * 627.
 plt.xlabel('Temperature (K)')
 plt.ylabel('Entropy (J/K/mol)')
 plt.legend()
-plt.savefig(prefix + '.pdf')
+plt.savefig(prefix + '_harmonic.pdf')
 
