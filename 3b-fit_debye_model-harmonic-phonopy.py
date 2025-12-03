@@ -14,7 +14,8 @@ prefix="xxxx" ## prefix for the generated files
 yamlfile="thermal_properties.yaml"
 npoly_debye=2 # number of parameters in the polynomial part of extended Debye
 aeinstein=[1000,2000] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
-z=4 # number of molecules per unit cell
+z=4 # number of molecules per unit cell (check!!)
+tdinitial = 100. # if None, use the intial Debye fit temperature; otherwise use this value
 #################
 
 import scipy
@@ -275,18 +276,20 @@ f0 = f0 / 4.184 / 627.50947 ## zero-point energy in Ha
 t = tlisth[1:] ## temperature in K (skip 0 K)
 f = fvib[1:] / 4.184 / 627.50947 - f0 ## free eneryg in Ha (skip 0 K)
 
-## initial debye fit
-def lsqr_residuals_debye(x,*args,**kwargs):
-    return (f - fdebye(t,x))
+if tdinitial is None:
+    ## initial debye fit
+    def lsqr_residuals_debye(x,*args,**kwargs):
+        return (f - fdebye(t,x))
 
-print("--- simple debye model fit ---",flush=True)
-res = scipy.optimize.least_squares(lsqr_residuals_debye, 1000,
-                                   bounds=(0,np.inf), ftol=1e-12,
-                                   xtol=None, gtol=None, verbose=0)
-td = res.x[0]
-print("Initial debye temperature (K) = %.4f\n" % td,flush=True)
-td = 100
-print("Resetting Tdebye to 100 K\n",flush=True)
+    print("--- simple debye model fit ---",flush=True)
+    res = scipy.optimize.least_squares(lsqr_residuals_debye, 1000,
+                                       bounds=(0,np.inf), ftol=1e-12,
+                                       xtol=None, gtol=None, verbose=0)
+    td = res.x[0]
+    print("Initial debye temperature (K) = %.4f\n" % td,flush=True)
+else:
+    td = tdinitial
+    print("Initial debye temperature (K) = %.4f\n" % tdinitial,flush=True)
 
 ## extended debye fit
 def lsqr_residuals_combine(x,*args,**kwargs):

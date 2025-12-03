@@ -14,6 +14,7 @@ prefix="urea" ## prefix for the generated files
 temperatures = np.arange(0, 600, 5) # temperature list
 npoly_debye=2 # number of parameters in the polynomial part of extended Debye
 aeinstein=[1000,2000] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
+tdinitial = 100. # if None, use the intial Debye fit temperature; otherwise use this value
 #################
 
 import pickle
@@ -266,16 +267,20 @@ f0 = fvib[0] * z / 4.184 / 627.50947 ## zero-point energy in Ha
 t = tlisth[1:] ## temperature in K (skip 0 K)
 s = svib[1:] * z / 1000 / 4.184 / 627.50947 ## entropy in Ha/K (skip 0 K)
 
-## initial debye fit
-def lsqr_residuals_debye(x,*args,**kwargs):
-    return (s - sdebye(t,x)) / t
+if tdinitial is None:
+    ## initial debye fit
+    def lsqr_residuals_debye(x,*args,**kwargs):
+        return (s - sdebye(t,x)) / t
 
-print("--- simple debye model fit ---",flush=True)
-res = scipy.optimize.least_squares(lsqr_residuals_debye, 1000,
-                                   bounds=(0,np.inf), ftol=1e-12,
-                                   xtol=None, gtol=None, verbose=0)
-td = res.x[0]
-print("Initial debye temperature (K) = %.4f\n" % td,flush=True)
+    print("--- simple debye model fit ---",flush=True)
+    res = scipy.optimize.least_squares(lsqr_residuals_debye, 1000,
+                                       bounds=(0,np.inf), ftol=1e-12,
+                                       xtol=None, gtol=None, verbose=0)
+    td = res.x[0]
+    print("Initial debye temperature (K) = %.4f\n" % td,flush=True)
+else:
+    td = tdinitial
+    print("Initial debye temperature (K) = %.4f\n" % tdinitial,flush=True)
 
 ## extended debye fit
 def lsqr_residuals_combine(x,*args,**kwargs):
