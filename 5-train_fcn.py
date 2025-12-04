@@ -55,7 +55,7 @@ fc2 = fc2 / fc_factor
 ## from phonopy.file_IO import write_FORCE_CONSTANTS, write_force_constants_to_hdf5
 ## write_FORCE_CONSTANTS(fc2)
 
-phcel.set_force_constants(fc2)
+phcel.force_constants = fc2
 phcel.run_mesh(150.)
 phcel.run_thermal_properties(temperatures=[0,300])
 
