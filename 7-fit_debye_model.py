@@ -9,17 +9,23 @@
 import numpy as np
 
 ## input block ##
-prefix="mgo" ## prefix for the generated files
+prefix="xxxx" ## prefix for the generated files
 temperatures = np.arange(0, 3010, 10) # temperature list
 npoly_debye=3 # number of parameters in the polynomial part of extended Debye
-aeinstein=[1000.] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
+aeinstein=[1000] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
+tdinitial = 100. # if None, use the intial Debye fit temperature; otherwise use this value
 #################
 
+import sys
 import pickle
 import scipy
 import scipy.constants
 import matplotlib.pyplot as plt
+sys.stdout = open("/dev/null","w")
+sys.stderr = open("/dev/null","w")
 from pygsl.testing.sf import debye_3 as D3
+sys.stdout = sys.__stdout__
+sys.stderr = sys.__stderr__
 from sklearn.metrics import r2_score
 
 ## deactivate deprecation warnings
@@ -249,16 +255,20 @@ f0 = xx[0,1] * z / 4.184 / 627.50947 ## zero-point energy in Ha
 t = xx[1:,0] ## temperature in K (skip 0 K)
 s = xx[1:,3] * z / 1000 / 4.184 / 627.50947 ## entropy in Ha/K (skip 0 K)
 
-## initial debye fit
-def lsqr_residuals_debye(x,*args,**kwargs):
-    return (s - sdebye(t,x)) / t
+if tdinitial is None:
+    ## initial debye fit
+    def lsqr_residuals_debye(x,*args,**kwargs):
+        return (s - sdebye(t,x)) / t
 
-print("--- simple debye model fit ---",flush=True)
-res = scipy.optimize.least_squares(lsqr_residuals_debye, 1000,
-                                   bounds=(0,np.inf), ftol=1e-12,
-                                   xtol=None, gtol=None, verbose=0)
-td = res.x[0]
-print("Initial debye temperature (K) = %.4f\n" % td,flush=True)
+    print("--- simple debye model fit ---",flush=True)
+    res = scipy.optimize.least_squares(lsqr_residuals_debye, 1000,
+                                       bounds=(0,np.inf), ftol=1e-12,
+                                       xtol=None, gtol=None, verbose=0)
+    td = res.x[0]
+    print("Initial debye temperature (K) = %.4f\n" % td,flush=True)
+else:
+    td = tdinitial
+    print("Initial debye temperature (K) = %.4f\n" % tdinitial,flush=True)
 
 ## extended debye fit
 def lsqr_residuals_combine(x,*args,**kwargs):
