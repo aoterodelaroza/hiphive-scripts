@@ -18,15 +18,15 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # load the info file
 with open(prefix + ".info","rb") as f:
-    calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel, out_kwargs = pickle.load(f)
+    calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel, out_kwargs, symprec = pickle.load(f)
 
 # build the harmonic clusterspace and save
-cs_harmonic = ClusterSpace(cell_for_cs, [cutoffs[0]], acoustic_sum_rules=True)
+cs_harmonic = ClusterSpace(cell_for_cs, [cutoffs[0]], acoustic_sum_rules=True, symprec=symprec)
 with open(prefix + ".cs_harmonic","wb") as f:
     pickle.dump([[cutoffs[0]],cs_harmonic],f)
 
 # build the complete clusterspace and save
-cs = ClusterSpace(cell_for_cs, cutoffs, acoustic_sum_rules=acoustic_sum_rules)
+cs = ClusterSpace(cell_for_cs, cutoffs, acoustic_sum_rules=acoustic_sum_rules, symprec=symprec)
 with open(prefix + ".cs","wb") as f:
     pickle.dump([cutoffs,cs],f)
 

@@ -29,7 +29,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # load the info file
 with open(prefix + ".info","rb") as f:
     calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor,\
-        phcel, out_kwargs = pickle.load(f)
+        phcel, out_kwargs, symprec = pickle.load(f)
 z = len(cell.get_chemical_symbols()) / len(phcel.primitive.masses)
 kB = scipy.constants.k / scipy.constants.physical_constants['hartree-joule relationship'][0] # Ha/K
 natom = len(cell)

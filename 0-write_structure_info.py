@@ -16,6 +16,7 @@ calculator = "espresso-in" ## program used for the calculations, case insensitiv
 maximum_cutoff = 6.2 ## maximum cutoff for this crystal (angstrom, NEWCELL NICE 1 on supercell)
 acoustic_sum_rules = False # whether to use acoustic sum rules (fewer parameters, much slower)
 nthread_batch_lsqr = 30 # if > 0, use batch least squares (less memory, more CPU) with these many threads
+symprec = 1e-4 # symprec for symmetry calculations in phonopy/spglib
 out_kwargs = { ## pass this down to ASE (example for QE)
     'prefix': 'crystal',
     'pseudo_dir': '../',
@@ -59,7 +60,8 @@ cell = ase.io.read(eq_structure)
 
 # supercell: make one phonopy and VASP like
 units = get_default_physical_units(phcalc)
-ph = phonopy.load(unitcell_filename=eq_structure,supercell_matrix=ncell.T,primitive_matrix=np.eye(3),calculator=phcalc,produce_fc=False)
+ph = phonopy.load(unitcell_filename=eq_structure,supercell_matrix=ncell.T,primitive_matrix=np.eye(3),
+                  calculator=phcalc,produce_fc=False,symprec=symprec)
 if os.path.isfile("FORCE_CONSTANTS") or os.path.isfile("FORCE_SETS") or os.path.isfile("force_constants.hdf5"):
     raise Exception("FORCE_CONSTANTS/FORCE_SETS/force_constants.hdf5 is present in this directory; stopping")
 phcel = ph ## save the phonopy cell (problems with primitive cells)
@@ -76,7 +78,7 @@ ase.io.write('supercell.geometry.in',scel,format="aims")
 # if BORN file exists, read the NAC parameters
 if os.path.isfile("BORN"):
     print("BORN file is used, generating " + prefix + ".fc2_lr",flush=True)
-    phcel.nac_params = parse_BORN(phcel.primitive, symprec=1e-5, is_symmetry=True,
+    phcel.nac_params = parse_BORN(phcel.primitive, symprec=symprec, is_symmetry=True,
                                   filename='BORN')
     phcel.force_constants = np.zeros((len(scel), len(scel), 3, 3))
     dynmat = phcel.dynamical_matrix
@@ -94,4 +96,4 @@ print(f'FC unit conversion factor to eV/ang**2: {fc_factor}',flush=True)
 # create the info file
 with open(prefix + ".info","wb") as f:
     pickle.dump([calculator.lower(), maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc,
-                 ncell, cell, cell_for_cs, scel, fc_factor,phcel,out_kwargs],f)
+                 ncell, cell, cell_for_cs, scel, fc_factor,phcel,out_kwargs,symprec],f)
