@@ -10,6 +10,7 @@ import ase
 import multiprocessing as mp
 from hiphive.force_constant_model import ForceConstantModel
 import threadpoolctl
+import os
 
 ## dictionary for least_squares_batch global variables
 batch_dict = {}
@@ -228,11 +229,15 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,fc2_subtra
     print("## preparing the force constant model",flush=True)
     fcm = ForceConstantModel(scel,cs)
 
+    nmaxthread = int(os.environ.get("OMP_NUM_THREADS"))
+    nomp = round(nmaxthread/nthread)
+    print("## OMP_NUM_THREADS = %d" % (nmaxthread),flush=True)
+    print("## ... of which this number of threads is spawned = %d" % (nthread),flush=True)
+    print("## ... and this number is used in OMP = %d" % (nomp),flush=True)
+
     # header message
     print("## calculating A,b matrices (parallel with %d threads)" % (nthread),flush=True)
     print("#[pid] structure-name num-atoms avg-disp avg-force max-force",flush=True)
-
-    nomp = round(224/nthread)
     with threadpoolctl.threadpool_limits(limits=nomp):
         ## calculate the least-squares matrices (and other data) in parallelized batches
         pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,fcm,nparam,A,b,
