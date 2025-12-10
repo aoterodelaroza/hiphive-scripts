@@ -13,7 +13,7 @@ import numpy as np
 prefix="urea" ## prefix for the generated files
 temperatures = np.hstack((np.arange(10,100,10),np.arange(100,501,50))) # temperature list (0 is always included) eg: np.arange(440, 0, -10)
 write_fc2eff = False # write the second-order effective force constants file (prefix-temp.fc2_eff)
-suffix_temperature = True # whether to add a temperature suffix to the svib file (for concurrent runs)
+suffix_temperature = False # whether to add a temperature suffix to the svib file (for concurrent runs)
 #################
 
 ## details of SCPH ##
