@@ -9,6 +9,7 @@ from hiphive.utilities import get_displacements
 import ase
 import multiprocessing as mp
 from hiphive.force_constant_model import ForceConstantModel
+import threadpoolctl
 
 ## dictionary for least_squares_batch global variables
 batch_dict = {}
@@ -231,18 +232,20 @@ def least_squares_batch(structs,nthread,cs=None,scel=None,fc2_LR=None,fc2_subtra
     print("## calculating A,b matrices (parallel with %d threads)" % (nthread),flush=True)
     print("#[pid] structure-name num-atoms avg-disp avg-force max-force",flush=True)
 
-    ## calculate the least-squares matrices (and other data) in parallelized batches
-    pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,fcm,nparam,A,b,
-                                                                  fc2_LR,fc2_subtract,None,None))
-    for atoms,result in zip(atomlist,pool.imap(thread_task,atomlist)):
-        Fsumabs += result[0]
-        Fsum += result[1]
-        Fnum += result[2]
-        atoms.arrays['displacements'] = result[3]
-        atoms.arrays['forces'] = result[4]
-        Fsum2 += np.sum(result[4]**2)
-    pool.close()
-    pool.join()
+    nomp = round(224/nthread)
+    with threadpoolctl.threadpool_limits(limits=nomp):
+        ## calculate the least-squares matrices (and other data) in parallelized batches
+        pool = mp.pool.Pool(nthread,initializer=thread_init,initargs=(scel,cs,fcm,nparam,A,b,
+                                                                      fc2_LR,fc2_subtract,None,None))
+        for atoms,result in zip(atomlist,pool.imap(thread_task,atomlist)):
+            Fsumabs += result[0]
+            Fsum += result[1]
+            Fnum += result[2]
+            atoms.arrays['displacements'] = result[3]
+            atoms.arrays['forces'] = result[4]
+            Fsum2 += np.sum(result[4]**2)
+        pool.close()
+        pool.join()
     if Fnum == 0:
         raise Exception("No structures found")
     Fmean = Fsum / Fnum

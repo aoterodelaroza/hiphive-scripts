@@ -7,6 +7,7 @@
 ## input block ##
 prefix="urea" ## prefix for the generated files
 outputs=["*harm*/*.out"] # regular expression for the files ()
+nthread_batch_lsqr_override = 30 # if >0, override the nthread value from 0-*py
 #################
 
 import os
@@ -22,6 +23,10 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # load the info file
 with open(prefix + ".info","rb") as f:
     calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel, out_kwargs, symprec = pickle.load(f)
+
+# nthreads
+if nthread_batch_lsqr_override and nthread_batch_lsqr_override > 0:
+    nthread_batch_lsqr = nthread_batch_lsqr_override
 
 # read the (complete) cluster configuration
 with open(prefix + ".cs","rb") as f:
