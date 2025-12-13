@@ -42,7 +42,8 @@ with open(prefix + ".info","rb") as f:
     calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel, out_kwargs, symprec = pickle.load(f)
 
 # initialize random seed
-seed = int(time.time())
+t0 = time.time()
+seed = int(t0)
 print(f'Initialized random seed: {seed}',flush=True)
 rs = np.random.RandomState(seed)
 
@@ -175,8 +176,8 @@ for t in temperatures:
             xconv = np.abs(np.sum(np.diff(slist[-n_last:]))) / np.mean(slist[-n_last:])
         else:
             xconv = 0.
-        print("! %4d : dx = %.3e fvib = %.3f svib = %.3f xconv/thr = %.5f/%.5f" %
-              (it,delta_x_norm,fvib,svib,xconv,conv_thr[i0]),flush=True)
+        print("! %4d : dx = %.3e fvib = %.3f svib = %.3f xconv/thr = %.5f/%.5f time=%.2f" %
+              (it,delta_x_norm,fvib,svib,xconv,conv_thr[i0],time.time()-t0),flush=True)
         print(f'{it}: {negstr} x_new = {x_new_norm:.3e},',
               f'delta_x = {delta_x_norm:.3e},',
               f'disp_ave = {disp_ave:.5f}, fvib = {fvib:.3f},',
