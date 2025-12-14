@@ -24,6 +24,7 @@ n_last = 10 # n_last steps are used for fvib, svib, etc. averages
 #################
 
 import os
+import os.path
 import time
 import pickle
 from hiphive import ForceConstantPotential, ForceConstants
@@ -41,7 +42,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 with open(prefix + ".info","rb") as f:
     calculator, maximum_cutoff, acoustic_sum_rules, nthread_batch_lsqr, phcalc, ncell, cell, cell_for_cs, scel, fc_factor, phcel, out_kwargs, symprec = pickle.load(f)
 
-# initialize random seed
+# initialize random seed and timer
 t0 = time.time()
 seed = int(t0)
 print(f'Initialized random seed: {seed}',flush=True)
@@ -112,11 +113,20 @@ for t in temperatures:
     print("\nStarted scph at temperature: %.2f K" % t,flush=True)
     param_old = coefs.copy()
     flist, slist = [], []
+    it0 = 0
+
+    # see if there is a restart file, then read it
+    if len(temperatures) == 1:
+        restartfile = f'{prefix}-{round(temperatures[0]):04d}.restart'
+        if os.path.isfile(restartfile):
+            print("Restarting from file: " + restartfile)
+            with open(restartfile,"rb") as f:
+                param_old, slist, flist, it0, i0, itlast = pickle.load(f)
 
     i0 = 0
     itlast = 0
     # run the number of steps indicated by user
-    for it in range(n_max):
+    for it in range(it0,n_max):
         # generate structures with new FC2, including the LR correction
         fcm.parameters = param_old
         fc2 = fcm.get_force_constants().get_fc_array(order=2)
@@ -192,6 +202,13 @@ for t in temperatures:
                 i0 = 1
             print("alpha=%.2e , abs(sum(diff(s[-n_last:]))) / mean(s[-n_last:]) = %.5f < conv_thr = %.5f" % (alpha[i0],xconv,conv_thr[i0]),flush=True)
 
+        # save the restart file
+        if len(temperatures) == 1:
+            restartfile = f'{prefix}-{round(temperatures[0]):04d}.restart'
+            with open(restartfile,"wb") as f:
+                print("Saving restart file " + prefix + ".restart",flush=True)
+                pickle.dump([param_old, slist, flist, it+1, i0, itlast], f)
+
     # calculate average properties and output
     fvib = np.mean(flist[len(flist)-n_last:len(flist)])
     svib = np.mean(slist[len(slist)-n_last:len(slist)])
@@ -204,6 +221,7 @@ for t in temperatures:
         print("Converged (K,kJ/mol,J/K/mol): T = %.2f fvib = %.3f fvibstd = %.5f svib = %.3f svibstd = %.5f" % (t,fvib,fvibstd,svib,svibstd),flush=True)
         print("%.2f %.8f %.8f %.8f %.8f" % (t,fvib,fvibstd,svib,svibstd),file=fout,flush=True)
 
+    # write the fc2
     if write_fc2eff == True:
         fc2 = ForceConstants.from_arrays(scel, fc2_array=(fc2 / fc_factor),
                                          fc3_array=None)
