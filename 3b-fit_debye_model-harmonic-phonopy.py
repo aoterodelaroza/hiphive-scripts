@@ -14,8 +14,7 @@ prefix="xxxx" ## prefix for the generated files
 yamlfile="thermal_properties.yaml"
 npoly_debye=2 # number of parameters in the polynomial part of extended Debye
 aeinstein=[1000,2000] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
-z=4 # number of molecules per unit cell (check!!)
-tdinitial = 100. # if None, use the intial Debye fit temperature; otherwise use this value
+tdinitial = 200. # if None, use the intial Debye fit temperature; otherwise use this value
 #################
 
 import scipy
@@ -340,7 +339,7 @@ print("Final r2 = %.10f\n" % r2_score(f,fcombine(t,res.x,pattern)))
 ## output the parameters in prefix.xdebye
 ## pin = [td, -- npoly_debye --, coef_eins, a_eins, coef_eins, a_eins, ...]
 with open(prefix + ".xdebye","w") as f:
-    print(f0/z,res.x[0],end=" ",file=f)
+    print(f0,res.x[0],end=" ",file=f)
     for x_ in res.x[1:1+npoly_debye]:
         print(x_,end=" ",file=f)
     for x_ in res.x[npoly_debye+1::2]:

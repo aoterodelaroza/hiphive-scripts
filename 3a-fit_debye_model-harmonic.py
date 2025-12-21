@@ -13,8 +13,8 @@ import numpy as np
 prefix="xxxx" ## prefix for the generated files
 temperatures = np.arange(0, 1000, 21) # temperature list
 npoly_debye=2 # number of parameters in the polynomial part of extended Debye
-aeinstein=[1000] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
-tdinitial = 300. # if None, use the intial Debye fit temperature; otherwise use this value
+aeinstein=[1000,2000] # characteristic temperatures for each of the Einstein terms (leave empty for no Einstein terms)
+tdinitial = 200. # if None, use the intial Debye fit temperature; otherwise use this value
 #################
 
 import pickle
